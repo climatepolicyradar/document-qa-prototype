@@ -165,3 +165,5 @@ cpr-genai-209208195b63.json
 *.pem
 
 data/
+
+src/frontend/node_modules/
