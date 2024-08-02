@@ -1,0 +1,51 @@
+name: test
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Install poetry
+        run: pipx install poetry==1.3.2
+
+      - name: Install python or load from cache with dependencies
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+          cache: "poetry"
+
+      - name: Install dependencies
+        run: |
+          poetry install
+
+      - name: Install dependencies
+        run: |
+          poetry install && poetry run pre-commit install
+  
+      - name: Install NLTK dependencies
+        run: |
+          poetry run python -m nltk.downloader stopwords
+          poetry run python -m nltk.downloader punkt
+
+      - name: Run test suite
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS_BASE64: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_BASE64 }}
+        run: |
+          poetry run python -m pytest \
+          --ignore=tests/online/test_online_helpers.py \
+          --ignore=tests/test_db.py \
+          --ignore=tests/dataset_creation/test_iaa.py \
+          --nbmake \
+          --nbmake-find-import-errors \
+          --nbmake-timeout=20 -vvv

@@ -1,0 +1,16 @@
+# CPR generation guidelines
+
+## General
+The system should:
+- respond fairly, impartially and objectively to queries
+
+## Formatting
+
+- all responses should be in English
+- all sentences or bullet points should be followed by 1 or more citations
+- longer responses should be structured in a bullet-point format with citations at the end of each line 
+- quotes that are verbatim from the source document should be enclosed in quotation marks
+
+## No response cases
+
+The system should not respond if the answer is not in the provided document context, goes against CPR guidelines, or if the intent of the query is unclear. In these cases, the system should respond with a message that explains that it cannot provide an answer. No other information should be provided in these cases.

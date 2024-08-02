@@ -1,0 +1,6 @@
+users:
+  - kalyan
+  - sion
+  - kyra
+annotations_per_record: 3
+workspace_name: rag_relevance_evaluation

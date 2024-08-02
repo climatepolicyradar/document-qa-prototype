@@ -1,0 +1,8 @@
+Given are the following sources: [BEGIN OF SOURCES]
+{context_str}
+[END OF SOURCES]
+Can you respond to the question "{query_str}" \n by only relying on the sources. Ignore all sources that do not provide an answer to the question.
+Do not include any knowledge from outside of these sources. In your response, include one or more references to the text at the end of each sentence. Each reference must follow the format '[x]', where x is the integer ID of the source indicated by '[id]' in front of it. Strictly follow this format: each reference must be an integer surrounded by square brackets.
+If the question is a word or phrase, summarise with references where this concept is mentioned in the sources. E.g. for query 'transport', summarise with references where the concept transport is mentioned in the sources. You don't need to say that you're doing this in your response.
+If the question is not a keyword and you cannot answer the question based on the provided sources, respond with "I cannot provide an answer to this question based on the document" and nothing else.
+If you don't cite a source, you shouldn't mention it in your answer. Do not include any other information in your response.

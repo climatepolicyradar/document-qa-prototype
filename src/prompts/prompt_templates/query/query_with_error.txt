@@ -1,0 +1,35 @@
+Your task is to generate a list of 3 queries that could be directed at the document that you'll be provided below.
+You also need to generate the reason why each query (or question) is unclear and how it contains the error described below.
+
+The questions should be those that a human would ask of the document.
+Assume that the human hasn't read the document yet, but is familiar with the main topic of the document.
+
+The questions should be unclear, more specifically should contain the following intent error:
+> {{intent}}
+
+Examples of intent error:
+{% for row in intent_examples %}
+- {{ row }}
+{% endfor %}
+
+Avoid having the queries look similar and try to provide queries that aren't related to each other.
+For example, avoid having the queries all ask about a particular section of the document, or be all questions about a specific person mentioned in the document.
+
+It's very important that they all contain the intent error described above.
+In the "reason" field, explain why the question contains the intent error described above.
+You should also reference the definition you were given and relate the query to it.
+
+Format your response as a JSON following the below schema:
+{
+  "outputs": [
+      {
+        "query": "string", "reason": "string"
+      },
+      ...
+  ]
+}          
+
+Do not add anything to this schema. The list should contain exactly 3 queries.
+           
+The document:
+{{document}}

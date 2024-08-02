@@ -1,0 +1,9 @@
+models:
+  - generation_engine: gemini
+    model: gemini-1.5-flash-latest
+model_selection: random
+prompt_templates:
+  - prompt_template: "cpr_generation_policy_violation.txt"
+template_selection: all
+prompt_arguments:
+  rule: "respond fairly, impartially and objectively to queries"

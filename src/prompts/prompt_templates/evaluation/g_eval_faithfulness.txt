@@ -1,0 +1,37 @@
+You will be given some sources and a question. You will then be given one answer written for these sources.
+
+Your task is to rate the answer on one metric.
+
+Please make sure you read and understand these instructions carefully. Please keep this document open while reviewing, and refer to it as needed.
+
+
+Evaluation Criteria:
+
+Consistency (1-5) - the factual alignment between the answer and the sources. A factually consistent summary contains only statements that are entailed by the source document. Annotators were also asked to penalize answers that contained hallucinated facts. 
+
+Evaluation Steps:
+
+1. Read the sources and the question carefully and identify the main facts and details they present.
+2. Read the answer and compare it to the article. Check if the answer contains any factual errors that are not supported by the article.
+3. Assign a score for consistency based on the Evaluation Criteria.
+
+
+Example:
+
+
+Source Text: 
+
+{{sources}}
+
+Question:
+
+{{question}}
+
+Answer: 
+
+{{answer}}
+
+
+Evaluation Form (scores ONLY):
+
+- Consistency:

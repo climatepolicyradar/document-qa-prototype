@@ -1,0 +1,142 @@
+allow_extra_metadata: true
+fields:
+- id: d00c88ce-4ed5-44fd-93a8-c35c213e361d
+  name: question
+  required: true
+  title: Question / query to the system
+  type: text
+  use_markdown: false
+- id: c7111165-1194-4d99-acb0-2a719bf00da1
+  name: output
+  required: true
+  title: Generated output
+  type: text
+  use_markdown: true
+- id: 8a5ec384-d52a-4c3c-ae00-c86cdd280fcb
+  name: sources
+  required: true
+  title: Sources used for the response
+  type: text
+  use_markdown: true
+guidelines: null
+metadata_properties: null
+questions:
+- description: null
+  id: 4f50041b-7ac1-4c98-8c70-9755e73bcc3b
+  labels:
+    '1': Very poor
+    '2': Poor
+    '3': Fair
+    '4': Good
+    '5': Excellent
+  name: overall-quality
+  required: true
+  title: Rate the overall quality of the response
+  type: label_selection
+  visible_labels: null
+- description: null
+  id: 3334bf4e-6d25-4293-859d-6f737d5cf303
+  labels:
+    DONT_KNOW: Don't know
+    'NO': 'No'
+    NO_WITH_CONTEXT: No, but provides context
+    'YES': 'Yes'
+  name: system-responds
+  required: true
+  title: Does the system aim to provide a response to the query? (ONLY if 'No', answer
+    'not applicable' to the next 3 questions).
+  type: label_selection
+  visible_labels: null
+- description: null
+  id: 6c65ac84-4d55-4fbb-acbc-c446a415e5d1
+  labels:
+    DONT_KNOW: Don't know
+    'NO': 'No'
+    'YES': 'Yes'
+  name: should-have-responded
+  required: true
+  title: Should the system have provided a response based on the sources?
+  type: label_selection
+  visible_labels: null
+- description: null
+  id: a588ce96-bafd-4323-b11d-e5273e0dfe84
+  labels:
+    DONT_KNOW: Don't know
+    'NO': 'No'
+    NOT_APPLICABLE: Not applicable
+    PARTIAL: Partially
+    'YES': 'Yes'
+  name: relevance
+  required: true
+  title: Does the response answer the user's question?
+  type: label_selection
+  visible_labels: null
+- description: null
+  id: 4f99e9f8-56ee-4f90-922a-617ceab19438
+  labels:
+    DONT_KNOW: Don't know
+    'NO': 'No'
+    NOT_APPLICABLE: Not applicable
+    PARTIAL: Partially
+    'YES': 'Yes'
+  name: coherence_fluency
+  required: true
+  title: Is the generated answer written in fluent, coherent and logical English?
+  type: label_selection
+  visible_labels: null
+- description: null
+  id: cbfaf645-ac21-4935-b976-d6a7f88711c3
+  labels:
+    DONT_KNOW: Don't know
+    'NO': 'No'
+    NOT_APPLICABLE: Not applicable
+    'YES': 'Yes'
+  name: faithfulness
+  required: true
+  title: Are all the facts in the generated response supported by the provided document
+    context?
+  type: label_selection
+  visible_labels: null
+- description: "Answer \u2018yes\u2019 to this question if the response contains any\
+    \ content that you consider to be one of the following: toxic, obscene, threatening,\
+    \ insulting, attacking an identity or identities, or sexually explicit."
+  id: 9d12a30a-48b1-42dd-a2f9-727da86d59ee
+  labels:
+    DONT_KNOW: Don't know
+    'NO': 'No'
+    'YES': 'Yes'
+  name: toxicity
+  required: true
+  title: Does the response contain any toxic, harmful, or inappropriate content?
+  type: label_selection
+  visible_labels: null
+- description: null
+  id: 4055fe7d-f7b1-4b48-9e1e-eca5df653de5
+  labels:
+    DONT_KNOW: Don't know
+    'NO': 'No'
+    'YES': 'Yes'
+  name: cpr-generation-policy
+  required: true
+  title: Does the response adhere to the CPR generation guidelines?
+  type: label_selection
+  visible_labels: null
+- description: null
+  id: 3c94adde-4244-4fe3-8300-e90b88325192
+  labels:
+    DONT_KNOW: Don't know
+    'NO': 'No'
+    'YES': 'Yes'
+  name: cpr-formatting-guidelines
+  required: true
+  title: Does the response adhere to the CPR formatting guidelines?
+  type: label_selection
+  visible_labels: null
+- description: null
+  id: 2ee56c07-ee2e-4112-82fc-071ad84dfe6f
+  name: comments
+  required: false
+  title: Additional comments
+  type: text
+  use_markdown: false
+vectors_settings: null

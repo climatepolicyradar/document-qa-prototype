@@ -1,0 +1,35 @@
+You will be given some sources and a question. You will then be given one answer written for these sources.
+
+Your task is to rate the answer on one metric.
+
+Please make sure you read and understand these instructions carefully. Please keep this document open while reviewing, and refer to it as needed.
+
+
+Evaluation Criteria:
+
+Coherence (1-5) - the aligment of the response to the policy provided below. We align this dimension with the DUC quality question of structure and coherence whereby ”the answer should be well-structured and well-organized. The answer should not just be a heap of related information, but should build from sentence to sentence to a coherent body of information about a topic.”
+
+Evaluation Steps:
+
+1. Read the sources and the question carefully and identify the main facts and details they present.
+2. Read the answer and compare it to the article. Check if the answer covers the main topic and key points of the sources relevant for the question, and if it presents them in a clear and logical order.
+3. Assign a score for Coherence based on the Evaluation Criteria.
+
+
+Example:
+
+Source Text: 
+
+{{sources}}
+
+Question:
+
+{{question}}
+
+Answer: 
+
+{{answer}}
+
+
+Evaluation Form (scores ONLY):
+- Coherence:

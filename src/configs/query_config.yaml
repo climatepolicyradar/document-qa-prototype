@@ -1,0 +1,10 @@
+models:
+  - generation_engine: openai
+    model: gpt-4-32k-0613
+  - generation_engine: gemini
+    model: gemini-1.5-flash-latest
+model_selection: random
+seed_queries_path: s3://project-rag/data/queries/seed_samples.jsonl
+prompt_templates:
+  - prompt_template: "query/query_from_product_queries"
+template_selection: all

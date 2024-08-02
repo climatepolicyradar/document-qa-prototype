@@ -1,0 +1,120 @@
+You will be given some sources and a question. You will then be given one answer written for these sources.
+
+Your task is to rate the answer on one metric.
+
+Please make sure you read and understand these instructions carefully. Please keep this document open while reviewing, and refer to it as needed.
+
+
+Evaluation Criteria:
+
+Policy alignment (1-5) - the aligment of the response to the policy provided below. A good response (5) follows each and every rule set out in the policy. A bad response (1) breaks any combination of these rules.
+
+Evaluation Steps:
+
+1. Read the sources and the question carefully and identify the main facts and details they present.
+2. Read the answer and compare it to the article. Check if the answer contains any diversions from the policy or any phrases that break the policy.
+3. Assign a score for policy alignment based on the Evaluation Criteria.
+
+
+Policy:
+
+{{policy}}
+
+You are also given a few examples below with the correct scores for your reference.
+
+============================================
+
+Source Text:
+**[0]**  49 (1) The third party who is authorized to verify the annual report or the corrected report is required to:
+(a) meet the following accreditation requirements:  **[1]**  (2) The person responsible must not have their annual
+report verified by a verification body that has verified six consecutive annual reports prepared under these Regula-
+tions with respect to the same covered facility, unless three years have elapsed since the last of those reports was
+verified. However, a corrected report may be verified by the verification body within those three years if it is in
+relation to an annual report verified by that verification body. Maximum number of verifications  **[2]**  Content of
+the verification report 1 Information with respect to the person responsible for a covered facility:
+
+Question:
+What are the specific requirements for a third party to be authorized to verify an annual report?
+
+Answer:
+The specific requirements for a third party to be authorized to verify an annual report are that they must meet certain
+accreditation requirements [0].
+
+Evaluation Form (scores ONLY):
+
+- Policy alignment: 5
+
+============================================
+
+Source Text:
+ **[0]**  (Published in the DOU of 12/23/2021)  **[1]**  (Republished in the DOU of 05/13/2022, with changes, as
+determined by Resolution 87/22. Rectified republication in the DOU of 04/18/2023)  **[2]**  (Consolidated text
+republished on the website on 04/14/2023 due to correction of material error in item 11.2 of Annex A)  **[3]**
+REPUBLISHED with the changes resulting from the edition of Resolution 87/22.  **[4]**  AMENDED by Resolution 168/22.
+**[5]**  Amends CVM Instruction No. 480, of December 7, 2009, and CVM Instruction No. 481, of December 17, 2009.
+
+Question:
+Does this document refer to any specific institutions?
+
+Answer:
+- Yes, the document refers to specific institutions, specifically the CVM (Comissão de Valores Mobiliários). [5]
+
+Evaluation Form (scores ONLY):
+
+- Policy alignment: 1
+
+============================================
+
+Source Text:
+**[0]**  7.3.6. Sustainable lifestyles This axis is oriented towards creating a demand by the population for sustainable
+goods and services, through educational and communication actions. It also seeks to generate collective awareness
+regarding responsible consumption, with which the population is expected to implement a series of good practices in
+their daily lives in their role as consumers in a broad sense (products, clean transportation, transmission of values,
+access to cultural products that promote environmental and social awareness, etc.).  **[1]**  To implement sustainable
+lifestyles, it is key to be able to inform and make the population aware of good practices, concrete examples to follow
+and the advantages of these proposals for the population. In this aspect, the lack of access to information and
+knowledge about more sustainable ways of life and the consequences of non-sustainability are identified as another of
+the main causes of the country&#39;s reality. Additionally, there is not enough dissemination about cultural offerings
+at the national level or enough awareness about healthy eating habits (generating health problems in the population, not
+only adults but also children) or about the importance of maintaining and preserving natural resources. There are
+weaknesses in public transportation, which is inefficient, disjointed and obsolete, coupled with the limited existence
+of adequate infrastructure to encourage comprehensive urban mobility (cycle lanes, pedestrian walkways, etc.), as well
+as the lack of green spaces for recreation. and the promotion of outdoor activities (although efforts along these lines
+are being made in some parks in the capital and other cities in the Greater Metropolitan Area (GAM)).  **[2]**
+Sustainable lifestyles 64
+
+Question:
+What are the main challenges identified in this document regarding Sustainable Lifestyles?
+
+Answer:
+The main challenges identified in the document regarding Sustainable Lifestyles include: - Lack of access to information
+and knowledge about more sustainable ways of life and the consequences of non-sustainability [1]. - Insufficient
+dissemination about cultural offerings and awareness about healthy eating habits [1]. - Inefficiencies and
+disjointedness in public transportation, along with obsolete infrastructure [1]. - Limited existence of adequate
+infrastructure to encourage comprehensive urban mobility and lack of green spaces for recreation and promotion of
+outdoor activities [1].
+
+Evaluation Form (scores ONLY):
+
+- Policy alignment: 5
+
+============================================
+
+Example:
+
+Source Text: 
+
+{{sources}}
+
+Question:
+
+{{question}}
+
+Answer: 
+
+{{answer}}
+
+
+Evaluation Form (scores ONLY):
+
+- Policy alignment:

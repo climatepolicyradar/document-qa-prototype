@@ -1,0 +1,63 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+# GitHub recommends pinning actions to a commit SHA.
+# To get a newer version, you will need to update the SHA.
+# You can also reference a tag or branch, but the action may change without warning.
+
+name: Push Image to ECR
+
+on:
+ push:
+    tags:
+      - '*'
+
+env: 
+  AWS_REGION: eu-west-1
+  ECR_REPOSITORY: rag-labs
+  ECR_REGISTRY: 845035659285.dkr.ecr.eu-west-1.amazonaws.com
+
+jobs:
+  push_to_ecr:
+    name: Push image to Amazon ECR
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout + download LFS objects
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+      
+      - name: Checkout LFS objects
+        run: git lfs checkout
+
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v1.7.0
+        with:
+          role-to-assume: arn:aws:iam::845035659285:role/GithubActionsDeployAccess
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@62f4f872db3836360b72999f4b87f1ff13310f3a
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        run: |
+          
+          docker build -t ${{ env.ECR_REPOSITORY }}:${{ github.ref_name }} .
+          
+          docker tag ${{ env.ECR_REPOSITORY }}:${{ github.ref_name }} ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ github.ref_name }}          
+          
+          docker push ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ github.ref_name }}
+          
+          docker tag ${{ env.ECR_REPOSITORY }}:${{ github.ref_name }} ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
+          
+          docker push ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
+

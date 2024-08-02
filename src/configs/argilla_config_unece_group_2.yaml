@@ -1,0 +1,26 @@
+users:
+  - roberta_boscolo
+  - henri_paillere
+  - giulia_manconi
+  - justyna_swolkien
+  - c_ozgen_karacan
+  - dario_liguti
+  - anna_piwowarska
+  - raymond_pilcher
+  - andrei_covatariu
+  - iva_brkic
+  - matt_pagett
+  - ilaria_conti
+annotations_per_record: 3
+existing_argilla_datasets:
+  - rag-evaluation-axes-unece
+  - rag-evaluation-axes-unece-group-1-batch-1
+  - rag-evaluation-axes-unece-group-1-batch-2
+  - rag-evaluation-axes-unece-group-1-batch-3
+  - rag-evaluation-axes-unece-group-1-batch-4
+  - rag-evaluation-axes-unece-group-1-batch-5
+  - rag-evaluation-axes-unece-group-2-batch-1
+  - rag-evaluation-axes-unece-group-2-batch-2
+  - rag-evaluation-axes-unece-group-2-batch-3
+  - rag-evaluation-axes-unece-group-2-batch-4
+  - rag-evaluation-axes-unece-group-2-batch-5

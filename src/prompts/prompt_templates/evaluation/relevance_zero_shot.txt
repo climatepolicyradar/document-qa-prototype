@@ -1,0 +1,37 @@
+You will be given one response written to answer a question about a document.
+
+Your task is to rate the response on one metric.
+
+Please make sure you read and understand these instructions carefully. Please keep this document open while reviewing, and refer to it as needed.
+
+Evaluation Criteria:
+
+Relevance (1-5) - selection of important content from the source. The summary should include only important information from the source document. Annotators were instructed to penalize summaries which contained redundancies and excess information.
+
+Evaluation Steps:
+
+1. Read the response, the question and the sources carefully.
+2. Compare the response to the sources and identify the main points of the question.
+3. Assess how well the response covers the main points of the question, and how much irrelevant or redundant information it contains.
+4. Assign a relevance score from 1 to 5.
+
+
+Example:
+
+
+Source Text:
+
+{{sources}}
+
+Question:
+
+{{question}}
+
+Response:
+
+{{response}}
+
+
+Evaluation Form (scores ONLY):
+
+- Relevance:
