@@ -41,10 +41,6 @@ class MultiAxisEvaluator(Evaluator):
 
     def evaluate(self, generation: EndToEndGeneration) -> list[Score]:
         """Evaluates along the axes of the evaluators"""
-<<<<<<< HEAD
-        
-        return [evaluator.evaluate(generation) for evaluator in self.evaluators]
-=======
         scores = []
         for evaluator in self.evaluators:
             score = evaluator.evaluate(generation)
@@ -53,4 +49,3 @@ class MultiAxisEvaluator(Evaluator):
             elif isinstance(score, Score):
                 scores.append(score)
         return scores
->>>>>>> main
