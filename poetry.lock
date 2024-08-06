@@ -3221,13 +3221,13 @@ six = "*"
 
 [[package]]
 name = "langfuse"
-version = "2.3.0"
+version = "2.4.0"
 description = "A client library for accessing langfuse"
 optional = false
 python-versions = ">=3.8.1,<4.0"
 files = [
-    {file = "langfuse-2.3.0-py3-none-any.whl", hash = "sha256:310b79cb6415dd8bf813924a7c0913a6b7c228dfad2f4e327b4223d64c297255"},
-    {file = "langfuse-2.3.0.tar.gz", hash = "sha256:8a564917d23faa9928bc8c40ec55b037bb954c1573e85c9722d37074246c832f"},
+    {file = "langfuse-2.4.0-py3-none-any.whl", hash = "sha256:3587e55988ac825328b1d270a1b1b7ee1cfd5cd6c100cd9047401766a024d128"},
+    {file = "langfuse-2.4.0.tar.gz", hash = "sha256:296cf1618048b03d2f8dc7366d5e5276ff8f3f2aad69688304653c0671d47f7b"},
 ]
 
 [package.dependencies]
@@ -8210,4 +8210,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.9.7 || >3.9.7,<3.12"
-content-hash = "d88efe52112658aa44290c35dfffc2b6ce757580c0b1d0a636cfe63ab5f013cf"
+content-hash = "20ea06b32dd389582abcfb2e3dc848cc2be950ba1dcc6ff4e08a79fbff5f0fc2"

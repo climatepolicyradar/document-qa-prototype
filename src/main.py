@@ -11,11 +11,6 @@ from src.controllers.RagController import RagController
 from src.controllers.ScenarioController import Scenario, ScenarioController
 
 from src.logger import get_logger
-from src.online.retrieval import (
-    get_chroma_vector_store,
-    get_available_document_ids_from_database,
-)
-from src.online.pipeline import _do_rag
 from src.models.data_models import RAGRequest
 from src import config
 
