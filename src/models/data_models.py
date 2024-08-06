@@ -10,6 +10,7 @@ from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 import datetime
 from peewee import * #type: ignore
 from playhouse.postgres_ext import BinaryJSONField
+from src.controllers.DocumentController import DocumentController
 from src.flows.utils import get_db
 
 import uuid
@@ -221,17 +222,18 @@ class RAGRequest(BaseModel):
     retrieval_window: int = 1
     config: Optional[str] = "src/configs/answer_config.yaml"
     
-    def as_scenario(self) -> Scenario:
+
+    def as_scenario(self, dc: DocumentController) -> Scenario:
         """Returns the RAGRequest as a Scenario object."""
         return Scenario(
             model=self.model,
             generation_engine=self.generation_engine,
-            prompt=Prompt(prompt_template=self.prompt_template),
-            document=BaseDocument(document_id=self.document_id),
+            prompt=Prompt.from_template(prompt_template=self.prompt_template),
+            document=dc.create_base_document(document_id=self.document_id),
             retrieval_window=self.retrieval_window,
             top_k_retrieval_results=self.top_k,
         )
-        
+
     @classmethod
     def from_scenario(cls, query: str, scenario: Scenario) -> "RAGRequest":
         """Returns the Scenario object as a RAGRequest object."""

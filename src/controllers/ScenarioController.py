@@ -62,25 +62,30 @@ class ScenarioController:
         """
         Load a set of scenarios from a config file
         """
+        if "yaml" not in config_path:
+            config_path = config_path + ".yaml"
+        if "/" not in config_path:
+            config_path = f"src/configs/{config_path}"
+
         LOGGER.info(f"🤖 Loading scenarios from config: {config_path}")
         config_path_p = Path(config_path) 
         cls.config = yaml.safe_load(config_path_p.read_text())
-        
+
         model_options = cls._create_options(cls, cls.config['models'], SelectionStrategy(cls.config['model_selection'])) # type: ignore
         template_options = cls._create_options(cls, cls.config['prompt_templates'], SelectionStrategy(cls.config['template_selection'])) # type: ignore
-        
+
         LOGGER.info(f"🤖 Loaded {len(model_options)} models and {len(template_options)} templates")
         all_options = [(model, template) for model in model_options for template in template_options]
-        
+
         if "retrieval" in cls.config: 
             retrieval_options = cls._create_options(cls, cls.config['retrieval'], SelectionStrategy(cls.config['retrieval_selection'])) # type: ignore
             all_options = [(model, template, retrieval) for model, template in all_options for retrieval in retrieval_options]
-            
+
         LOGGER.info(f"🤖 Created {len(all_options)} scenarios from config")
         LOGGER.info(f"🤖 Scenarios: {all_options}")
-        
+
         cls._load_template_map(cls) # type: ignore
-        
+
         # TODO: is this same behaviour as orig? 
         #param_list = product(*all_options)
         #param_list = [reduce(lambda x, y: x | y, params) for params in param_list]
