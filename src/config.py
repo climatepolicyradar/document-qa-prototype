@@ -5,7 +5,7 @@ import os
 from typing import Optional
 from dotenv import load_dotenv, find_dotenv
 
-load_dotenv(find_dotenv())
+load_dotenv(find_dotenv(), override=True)
 
 
 def _assert_path_exists(path: Path):
@@ -52,7 +52,48 @@ if encoded_creds:
     VERTEX_CREDS = json.loads(base64.b64decode(encoded_creds).decode("utf-8"))
 
 VERTEX_MODEL_ENDPOINTS = {
-    "llama3-8b-chat": {"endpoint_id": "8290603546454261760", "location": "europe-west2"}
+    "llama3-8b-chat": {
+        "type": "model_garden",
+        "endpoint_id": "8290603546454261760", 
+        "location": "europe-west2",
+        "params": {
+            "max_tokens": 8000
+        }
+    },
+    "neural-chat-7b": { ## Same issue as climate gpt
+        "type": "model_garden",
+        "endpoint_id": "1766295061277966336",
+        "location": "europe-west2",
+        "params": {
+            "max_tokens": 8000
+        }
+    },
+    "llama3-1-8b-instruct": {
+        "type": "model_garden",
+        "endpoint_id": "7530902584312201216",
+        "location": "europe-west2",
+        "params": {
+            "max_tokens": 8000
+        }
+    }, 
+    "climate-gpt-7b": { # This isn't working until we get llama2chat wrapper working.
+        "type": "model_garden",
+        "wrapper": "llama2",
+        "endpoint_id": "6226406804746665984",
+        "location": "europe-west2",
+        "params": {
+            "max_tokens": 8000
+        }
+    },
+    "mistral-nemo": {
+        "type": "vertex_api",
+        "model_name": "mistral-nemo@2407",
+        "publisher": "mistralai",
+        "location": "europe-west4",
+        "params": {
+            "max_output_tokens": 2048
+        }
+    },
 }
 
 _assert_path_exists(DOCUMENT_DIR)

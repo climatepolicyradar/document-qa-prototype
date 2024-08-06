@@ -16,16 +16,17 @@ from src.online.inference import get_llm
 from src.dataset_creation.query_utils import render_document_text_for_llm, sanitise_response_text
 
 from src.online.pipeline import rag_chain
-
+from src import config
 from src.logger import get_logger
 
 
 LOGGER = get_logger(__name__)
 
 class RagController:
-    def __init__(self):
+    def __init__(self, observe: bool = True):
         self.vespa = VespaController()
         self.observability = ObservabilityManager()
+        self.observe = observe
         
     def get_llm(self, type: str, model: str) -> Union[LLM, BaseChatModel]:  # type: ignore
         """
@@ -34,6 +35,16 @@ class RagController:
         TODO: Move the get_llm underlying function to here for nicer encapsulation
         """
         return get_llm(type, model)
+    
+    def get_llm_parameters(self, type: str, model: str):
+        """
+        Get the parameters for the given model. Only supported for vertex models right now
+        """
+        if type == "vertexai":
+            return config.VERTEX_MODEL_ENDPOINTS[model]["params"]
+        else:
+            return {}
+        
         
     def get_available_documents(self) -> list[BaseDocument]:
         """
@@ -62,8 +73,16 @@ class RagController:
         llm = self.get_llm(scenario.generation_engine, scenario.model)
         prompt = scenario.prompt.prompt_content.render(prompt_data)
         
-        LOGGER.info(f"🤔 Running prompt: {prompt}")
-        return llm.invoke(prompt, config={"callbacks": [self.observability.get_tracing_callback()]})
+        LOGGER.info(f"🤔 Running {scenario.model} and prompt: {prompt}")
+        
+        if self.observe: 
+            result = llm.invoke(prompt, config={"callbacks": [self.observability.get_tracing_callback()]}, **self.get_llm_parameters(scenario.generation_engine, scenario.model))
+        else:
+            result = llm.invoke(prompt, **self.get_llm_parameters(scenario.generation_engine, scenario.model))
+            
+        LOGGER.info(f"Model: {scenario.model} -> {result}")
+        return result
+
 
     def generate_queries(
         self, 
