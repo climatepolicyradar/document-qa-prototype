@@ -8,6 +8,7 @@ from typing import Optional, Union
 from langchain_core.language_models.llms import LLM
 from langchain_core.language_models.chat_models import BaseChatModel
 from src.controllers.VespaController import VespaController
+from src.controllers.ObservabilityManager import ObservabilityManager
 
 from src.logger import get_logger
 from src.models.data_models import AssertionModel, EndToEndGeneration, Prompt, Query, RAGRequest, RAGResponse
@@ -17,12 +18,14 @@ from src.dataset_creation.query_utils import render_document_text_for_llm, sanit
 from src.online.pipeline import rag_chain
 
 from src.logger import get_logger
-from src.prompts.template_building import get_citation_template
+
+
 LOGGER = get_logger(__name__)
 
 class RagController:
     def __init__(self):
         self.vespa = VespaController()
+        self.observability = ObservabilityManager()
         
     def get_llm(self, type: str, model: str) -> Union[LLM, BaseChatModel]:  # type: ignore
         """
@@ -60,7 +63,7 @@ class RagController:
         prompt = scenario.prompt.prompt_content.render(prompt_data)
         
         LOGGER.info(f"🤔 Running prompt: {prompt}")
-        return llm.invoke(prompt)
+        return llm.invoke(prompt, config={"callbacks": [self.observability.get_tracing_callback()]})
 
     def generate_queries(
         self, 
@@ -81,7 +84,7 @@ class RagController:
             document=document_text
         )
         
-        response = llm.invoke(prompt)
+        response = llm.invoke(prompt, config={"callbacks": [self.observability.get_tracing_callback()]})
         
         assert isinstance(response, BaseMessage)
         assert isinstance(response.content, str)
@@ -118,7 +121,7 @@ class RagController:
         response = rag_chain_with_source.invoke({
             "query_str": query,
             "document_id": scenario.document.document_id
-        })
+        }, config={"callbacks": [self.observability.get_tracing_callback()]})
         
         response_text = response['answer']
         LOGGER.info(f"Response: {response_text}")

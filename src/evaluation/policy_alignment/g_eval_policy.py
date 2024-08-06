@@ -19,7 +19,7 @@ class GEvalPolicy(GEval):
     def __init__(self, *args, name: Optional[str] = None):
         super().__init__(*args)
         self.policy = (
-            config.policy_templates_folder / "cpr_generation_policy_general_updated.txt"
+            config.policy_templates_folder / "cpr_generation_policy_general.txt"
         ).read_text()
         self.template = jinja_template_loader(
             config.evaluation_templates_folder
