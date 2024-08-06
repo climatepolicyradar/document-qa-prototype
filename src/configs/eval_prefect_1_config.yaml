@@ -1,0 +1,27 @@
+models:
+  - generation_engine: openai
+    model: gpt-4o
+model_selection: random
+prompt_templates:
+  - prompt_template: evals-0.0.1/queries-ambiguous.txt
+  - prompt_template: evals-0.0.1/queries-bias-equity-risk.txt
+  - prompt_template: evals-0.0.1/queries-esl.txt
+  - prompt_template: evals-0.0.1/queries-inference.txt
+  - prompt_template: evals-0.0.1/queries-no-answer.txt
+  - prompt_template: evals-0.0.1/queries-normal.txt
+  - prompt_template: evals-0.0.1/queries-numerical.txt
+  - prompt_template: evals-0.0.1/queries-opinions.txt
+  - prompt_template: evals-0.0.1/queries-partial-answer.txt
+  - prompt_template: evals-0.0.1/queries-policy-violation.txt
+  - prompt_template: evals-0.0.1/queries-search-terms.txt
+  - prompt_template: evals-0.0.1/queries-sections.txt
+  - prompt_template: evals-0.0.1/queries-summaries.txt
+  - prompt_template: evals-0.0.1/queries-typo.txt
+template_selection: all
+retrieval:
+  - retrieval_window: 1
+    top_k: 3
+  - retrieval_window: 0
+    top_k: 6
+retrieval_selection: random
+documents_per_query: 1 # set this to 1 if the query file contains document ids
