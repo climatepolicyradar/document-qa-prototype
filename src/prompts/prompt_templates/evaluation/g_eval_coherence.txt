@@ -15,6 +15,10 @@ Evaluation Steps:
 2. Read the answer and compare it to the article. Check if the answer covers the main topic and key points of the sources relevant for the question, and if it presents them in a clear and logical order.
 3. Assign a score for Coherence based on the Evaluation Criteria.
 
+- Output ONLY the score, no other text.
+- Output ONLY the score as a number. 
+- The output should pass an is_digit() check.
+
 
 Example:
 

@@ -1,0 +1,23 @@
+Generate a list of 5 very long or multi-part questions related to the document's content. These queries should test the system's ability to handle complex, multi-faceted inquiries.
+
+Assume that the human hasn't read the document yet, but is familiar with the main topic of the document.
+
+You are provided some examples of real queries below. The generated queries should be similar to these in style but should be significantly longer or consist of multiple parts.
+
+Examples of real queries:
+{% for row in seed_queries %}
+- {{ row.text }}
+{% endfor %}
+
+- Avoid generating similar queries
+- Generate queries that aren't related to each other.
+
+Some of the above queries are keywords. Aim to generate similar or exactly the same keywords as in the list, if relevant for the document's topic.
+
+Format your response as a JSON following the below schema:
+{"queries": list[str]}
+
+Do not add anything to this schema. The list should contain exactly 5 queries. The queries should be very different from each other.
+
+The document:
+{{document}}

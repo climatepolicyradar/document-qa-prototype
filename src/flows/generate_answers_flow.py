@@ -18,9 +18,8 @@ def generate_answers_flow(
     tag: str
 ):
     dc = DocumentController()
-    rc = RagController()
+    rc = RagController(observe=False)
     
-    # TODO how do we want to specify which queries get answered?
     logger = get_run_logger()
     logger.info(f"📋 DB: {db}")
     
@@ -32,16 +31,10 @@ def generate_answers_flow(
                 
         logger.info(f"📋 Scenario: {scenario}")
         logger.info(f"💡 Generating answer for query: {query}")
-        result = generate_answer_task.submit(query, scenario, tag, rc)
+        result = generate_answer_task.submit(query, scenario, tag, rc).wait()
         
         #Save to database
-        save_answer.submit(tag, result, db)
-        
-        # Because the concurrency can get a bit nuts 
-        if i % 5 == 0 and i != 0:
-            logger.info("⏳ Waiting for 5 seconds...")
-            import time
-            time.sleep(5)
+        save_answer.submit(tag, result, db, query).wait()
         
     
 if __name__ == "__main__":

@@ -11,6 +11,7 @@ from cpr_data_access.models import BaseDocument
 from src.models.data_models import Query, QueryType
 from src.online.inference import get_llm
 from src.logger import get_logger
+from src.config import VERTEX_MODEL_ENDPOINTS
 
 
 LOGGER = get_logger(__name__)
@@ -28,6 +29,18 @@ class PromptTemplateArguments:
 def render_document_text_for_llm(document_text: str, model: str) -> str:
     """Truncates the document text based on the model's token limit."""
     _encoded_doc = enc_gpt_4.encode(document_text)
+    
+    if model in VERTEX_MODEL_ENDPOINTS:
+        truncation_amnt = 1500
+        max_tokens = VERTEX_MODEL_ENDPOINTS[model]["params"]["max_tokens"] if "max_tokens" in VERTEX_MODEL_ENDPOINTS[model]["params"] else VERTEX_MODEL_ENDPOINTS[model]["params"]["max_output_tokens"]
+        
+        if len(_encoded_doc) > max_tokens:
+            truncate_to = max_tokens-truncation_amnt
+            LOGGER.warning(
+                f"Document too long [{len(_encoded_doc)}], truncating to {truncate_to} tokens."
+            )
+            return enc_gpt_4.decode(_encoded_doc[:truncate_to])
+        return document_text
 
     if len(_encoded_doc) > 30000 and "gemini" not in model:
         LOGGER.warning(

@@ -70,6 +70,8 @@ class ScenarioController:
         LOGGER.info(f"🤖 Loading scenarios from config: {config_path}")
         config_path_p = Path(config_path) 
         cls.config = yaml.safe_load(config_path_p.read_text())
+        
+        LOGGER.info(cls.config)
 
         model_options = cls._create_options(cls, cls.config['models'], SelectionStrategy(cls.config['model_selection'])) # type: ignore
         template_options = cls._create_options(cls, cls.config['prompt_templates'], SelectionStrategy(cls.config['template_selection'])) # type: ignore
