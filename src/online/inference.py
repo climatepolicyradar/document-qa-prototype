@@ -8,13 +8,14 @@ from langchain_community.llms.titan_takeoff import TitanTakeoff
 from langchain_community.llms.huggingface_text_gen_inference import (
     HuggingFaceTextGenInference,
 )
+from langchain_experimental.chat_models.llm_wrapper import Llama2Chat
 from langchain_openai import ChatOpenAI
 from langchain_core.callbacks import (
     AsyncCallbackManagerForLLMRun,
     CallbackManagerForLLMRun,
 )
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_google_vertexai import VertexAIModelGarden
+from langchain_google_vertexai import ChatVertexAI, VertexAI, VertexAIModelGarden
 from langchain_community.llms.huggingface_endpoint import HuggingFaceEndpoint
 from google.generativeai.types.safety_types import HarmBlockThreshold, HarmCategory
 import google.auth
@@ -93,7 +94,6 @@ class MockRagLLM(LLM):
     def _identifying_params(self) -> Mapping[str, Any]:
         return {}
 
-
 def get_llm(
     type: str,
     model: Optional[str] = None,
@@ -145,14 +145,7 @@ def get_llm(
         return ChatGoogleGenerativeAI(
             model=_model,
             google_api_key=os.getenv("GEMINI_API_KEY"),
-            safety_settings={
-                HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-            }
-            if unfiltered
-            else {},
+            safety_settings=_get_safety_settings(unfiltered),
             max_retries=1,
             convert_system_message_to_human=True if "1.0" in _model else False,
         )  #  type: ignore
@@ -187,26 +180,44 @@ def get_llm(
             os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = temp_file_path
 
             model = model or "rag-meta-llama-3-1-8b-instruct"
-            endpoint = config.VERTEX_MODEL_ENDPOINTS[model]["endpoint_id"]
-            location = config.VERTEX_MODEL_ENDPOINTS[model]["location"]
-
-            assert endpoint is not None, f"Endpoint for model {model} not found"
+            location = config.VERTEX_MODEL_ENDPOINTS[model]["location"] 
+            
             assert project_id is not None, f"Project for model {model} not found"
+            
+            if config.VERTEX_MODEL_ENDPOINTS[model]["type"] == "model_garden":
+                endpoint = config.VERTEX_MODEL_ENDPOINTS[model]["endpoint_id"]
 
-            llm = VertexAIModelGarden(
-                project=project_id or "",
-                endpoint_id=endpoint or "",
-                location=location,
-                allowed_model_args=["temperature", "max_tokens"],
-                safety_settings={
-                    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-                    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-                    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-                    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-                }
-                if unfiltered
-                else {},
-                max_retries=1,
-            )
+                assert endpoint is not None, f"Endpoint for model {model} not found"
+
+                llm = VertexAIModelGarden(
+                    project=project_id or "",
+                    endpoint_id=endpoint or "",
+                    location=location,
+                    allowed_model_args=["temperature", "max_tokens"],
+                    safety_settings=_get_safety_settings(unfiltered),
+                    max_retries=1,
+                )
+                
+            elif config.VERTEX_MODEL_ENDPOINTS[model]["type"] == "vertex_api":
+                publisher = config.VERTEX_MODEL_ENDPOINTS[model]["publisher"]
+                llm = VertexAI(
+                    full_model_name=f"projects/{project_id}/locations/{location}/publishers/{publisher}/models/{model}",
+                    location=location,
+                    project=project_id,
+                    allowed_model_args=["temperature", "max_output_tokens"],
+                    safety_settings=_get_safety_settings(unfiltered),
+                    max_retries=1,
+                )
 
         return llm
+    
+def _get_safety_settings(unfiltered: bool) -> dict:
+    if unfiltered:
+        return {
+            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+    }
+    else:
+        return {}

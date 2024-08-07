@@ -1,0 +1,28 @@
+models:
+  - generation_engine: gemini
+    model: gemini-1.5-pro
+  - generation_engine: gemini
+    model: gemini-1.5-flash
+  - generation_engine: gemini
+    model: gemini-1.0-pro
+  - generation_engine: vertexai
+    model: mistral-nemo
+  - generation_engine: vertexai
+    model: llama3-8b-chat
+  - generation_engine: vertexai
+    model: llama3-1-8b-instruct
+  - generation_engine: openai
+    model: gpt-3.5-turbo
+  - generation_engine: openai
+    model: gpt-4-turbo
+  - generation_engine: openai
+    model: gpt-4o
+model_selection: all
+prompt_templates:
+  - prompt_template: response/test_response
+template_selection: all
+retrieval:
+  - retrieval_window: 1
+    top_k: 3
+retrieval_selection: random
+documents_per_query: 1 # set this to 1 if the query file contains document ids

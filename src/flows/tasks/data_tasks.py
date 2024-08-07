@@ -57,10 +57,10 @@ def get_queries(db: Database, tag: str = None) -> list[Query]:
     timeout_seconds=600,
     tags=["calls_db"]
 )
-def save_answer(tag: str, answer: EndToEndGeneration, db: Database):
+def save_answer(tag: str, answer: EndToEndGeneration, db: Database, query: DBQuery):
     logger = get_run_logger()
     logger.info(f"Saving answer to database...")
-    answer.to_db_model(tag).save()
+    answer.to_db_model(tag, query_id=query.db_id).save()
     
 @task(
     retries=5,

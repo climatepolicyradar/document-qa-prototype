@@ -1,0 +1,24 @@
+Generate a list of 5 queries that could be asked by a human with english as a second language of the document that is provided below.
+Assume that the human hasn't read the document yet, but is familiar with the main topic of the document.
+You are provided some examples of real queries below from proficient english speakers. The generated queries should be similar to these but with varying levels of english proficiency, including spelling and grammar.
+
+Examples of real queries:
+{% for row in seed_queries %}
+- {{ row.text }}
+{% endfor %}
+
+- Generate queries with a diverse range of levels of english proficiency.
+- Avoid generating similar queries
+- Generate queries that aren't related to each other.
+
+For example, avoid having the queries all ask about a particular section of the document, or be all questions about a specific person mentioned in the document.
+
+Some of the above queries are keywords. Aim to generate similar or exactly the same keywords as in the list, if relevant for the document.
+
+Format your response as a JSON following the below schema:
+{"queries": list[str]}
+
+Do not add anything to this schema. The list should contain exactly 5 queries. The queries should be very different from each other.
+
+The document:
+{{document}}

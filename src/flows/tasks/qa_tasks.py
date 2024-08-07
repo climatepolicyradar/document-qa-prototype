@@ -19,12 +19,11 @@ def create_query_list_task(
     scenario: Scenario,
     document: BaseDocument,
     seed_queries: list[Query],
-    sc: ScenarioController,
+    rc: RagController,
     tag: str
 ) -> list[Query]:
     logger = get_run_logger()
     
-    rc = RagController()
     
     try:
         logger.info(f"Generating queries for {document.document_id} with tag {tag}")

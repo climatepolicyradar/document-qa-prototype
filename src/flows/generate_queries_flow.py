@@ -1,4 +1,5 @@
 from prefect import flow, get_run_logger
+from src.controllers.RagController import RagController
 from src.controllers.ScenarioController import ScenarioController
 from src.flows.tasks.qa_tasks import create_query_list_task
 from src.flows.tasks.data_tasks import create_queries, show_db_stats
@@ -26,6 +27,8 @@ def generate_queries_flow(
     
     if offset is None:
         offset = 0
+        
+    rc = RagController(observe=False)
     
     show_db_stats(db)
     for document in docs.documents[offset:limit]:      
@@ -35,7 +38,7 @@ def generate_queries_flow(
                     scenario=scenario,
                     document=document, 
                     seed_queries=seed_queries,
-                    sc=sc,
+                    rc=rc,
                     tag=tag
                 ) # type: ignore
                 create_queries.submit(queries, db)

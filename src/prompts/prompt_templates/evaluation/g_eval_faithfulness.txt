@@ -16,6 +16,10 @@ Evaluation Steps:
 3. Assign a score for consistency based on the Evaluation Criteria.
 
 
+- Output ONLY the score, no other text.
+- Output ONLY the score as a number. 
+- The output should pass an is_digit() check.
+
 Example:
 
 

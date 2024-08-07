@@ -89,6 +89,7 @@ class Query(BaseModel):
     timestamp: datetime.datetime
     document_id: Optional[str] = None
     prompt_template: Optional[str] = None
+    db_id: Optional[int] = None
     user: Optional[str] = None
     model: Optional[str] = None
     uuid: Optional[str] = None
@@ -171,7 +172,8 @@ class DBQuery(Model):
             user=self.user,
             model=self.model,
             uuid=str(self.uuid),
-            tag=self.tag
+            tag=self.tag,
+            db_id=self.id
         )
         
     class Meta:

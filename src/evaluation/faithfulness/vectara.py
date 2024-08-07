@@ -41,7 +41,7 @@ class Vectara(Evaluator):
             scores = self.model.predict(pairs).detach().cpu().numpy()
 
         return Score(
-            score=float(outputs[0]),
+            score=float(scores[0]),
             type=self.TYPE,
             name=self.NAME,
             gen_uuid=generation.uuid,  # type: ignore

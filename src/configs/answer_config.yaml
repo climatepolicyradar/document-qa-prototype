@@ -1,6 +1,6 @@
 models:
-  - generation_engine: openai
-    model: gpt-4-turbo
+  - generation_engine: gemini
+    model: gemini-1.5-pro
 model_selection: random
 prompt_templates:
   - prompt_template: response/FAITHFULQA_SCHIMANSKI_CITATION_QA_TEMPLATE_MODIFIED
