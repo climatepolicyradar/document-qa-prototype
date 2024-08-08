@@ -21,6 +21,7 @@ from google.generativeai.types.safety_types import HarmBlockThreshold, HarmCateg
 import google.auth
 import tempfile
 import json
+from src.flows.utils import get_secret
 
 from src.streamlit.app_helpers import _find_source_indices_in_rag_response
 
@@ -137,14 +138,14 @@ def get_llm(
             repo_id=model or "mistralai/Mistral-7B-Instruct-v0.2",
             max_new_tokens=1024,
             temperature=0.01,
-            huggingfacehub_api_token=os.getenv("HUGGINGFACE_TOKEN"),
+            huggingfacehub_api_token=get_secret("HUGGINGFACE_TOKEN"),
         )  #  type: ignore
 
     elif _llm_type == LLMTypes.GEMINI:
         _model = model or "gemini-1.5-flash-latest"
         return ChatGoogleGenerativeAI(
             model=_model,
-            google_api_key=os.getenv("GEMINI_API_KEY"),
+            google_api_key=get_secret("GEMINI_API_KEY"),
             safety_settings=_get_safety_settings(unfiltered),
             max_retries=1,
             convert_system_message_to_human=True if "1.0" in _model else False,

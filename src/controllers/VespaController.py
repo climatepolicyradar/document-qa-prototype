@@ -19,9 +19,6 @@ LOGGER = get_logger(__name__)
 DOCUMENT_PASSAGES_MAX = 1000 # How many passages in a full document upper bound
 
 class VespaController:
-    def __init__(self):
-        self.vespa = get_vespa_app()
-        
     def query(
             self, 
             query: str, 
@@ -29,13 +26,16 @@ class VespaController:
             hits: int = 20, 
             rank_profile: str = "splade",
         ) -> dict:
+        
+        # Connect here not on construction so connection is not held open for long
+        vespa = get_vespa_app()
         LOGGER.info(f"🔍 Vespa query: {query} for document_id: {document_id}")
     
         query_body = None
         yql = f"select text_block_id, text_block, text_block_window from sources document_passage where userQuery() and (document_import_id in ('{document_id}'))"
         
         
-        with self.vespa.syncio() as session:
+        with vespa.syncio() as session:
             response: VespaQueryResponse = session.query(
                 yql=yql,
                 hits=hits,

@@ -46,43 +46,6 @@ class VespaResponse(BaseModel):
     rank_profile: str
     results: list[VespaRankingResult]
 
-    def to_argilla_records(self, num_sample: int) -> list[rg.FeedbackRecord]:
-        """
-        Convert the Vespa response to a list of Argilla FeedbackRecord objects.
-
-        Does this by sampling `num_sample` results from the Vespa response. A random
-        seed should be set if you want this to be reproducible.
-
-        :raises ValueError: if `num_sample` is greater than the number of results in the Vespa response.
-        """
-        if len(self.results) < num_sample:
-            raise ValueError(
-                f"Number of samples to take ({num_sample}) must be less than the number of results ({len(self.results)})"
-            )
-
-        results_sample = random.sample(self.results, num_sample)
-
-        feedback_records = []
-
-        for result in results_sample:
-            feedback_records.append(
-                rg.FeedbackRecord(
-                    fields={
-                        "query": self.query,
-                        "text_block": result.text_block.text_block,
-                        "text_block_window": result.text_block.text_block_window,
-                    },
-                    metadata={
-                        "document_id": self.document_id,
-                        "rank_profile": self.rank_profile,
-                        "score": result.score,
-                        "rank": result.rank,
-                    },
-                )
-            )
-
-        return feedback_records
-
 
 def vespa_response_is_valid(response: dict) -> bool:
     """

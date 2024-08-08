@@ -370,34 +370,6 @@ class EndToEndGeneration(BaseModel):
             generation=json.dumps(self.model_dump()),
         )
 
-    def to_argilla_feedback_record(self) -> rg.FeedbackRecord:
-        """Converts the EndToEndGeneration object to an argilla FeedbackRecord object."""
-
-        if self.error:
-            raise ValueError(
-                f"Cannot convert EndToEndGeneration with error to FeedbackRecord: {self.error}"
-            )
-
-        if not self.rag_response:
-            raise ValueError(
-                "Cannot convert EndToEndGeneration without response to FeedbackRecord"
-            )
-
-        return rg.FeedbackRecord(
-            fields={
-                "question": self.rag_request.query,
-                "output": self.rag_response.text,
-                "sources": self.rag_response.retrieved_windows_as_string(),
-            },
-            metadata={
-                "document_id": self.rag_request.document_id,
-            }
-            | self.config,
-            # Ensure unique external_id, otherwise Argilla throws uniqueness errors
-            external_id=str(self.uuid) + "___" + uuid.uuid4().hex,
-        )
-
-
 class RAGLog(BaseModel):
     """Log object for the RAG pipeline."""
 

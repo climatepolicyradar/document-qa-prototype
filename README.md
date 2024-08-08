@@ -64,3 +64,10 @@ Some datasets that are related to this codebase are:
 ## TODOs
 - [ ] Update this readme post-refactor 
 - [x] Add defensive checks on vertex integration when merging for project_id and endpoint_id if they're not provided 
+
+## Temporary notes
+
+```
+export AWS_PROFILE=labs; /usr/local/bin/aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin 845035659285.dkr.ecr.eu-west-1.amazonaws.com/prefect-rag-labs
+```
+`prefect cloud login`

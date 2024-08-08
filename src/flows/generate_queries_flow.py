@@ -75,7 +75,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     sc = ScenarioController().from_config(args.config)
-    
+    #s3://project-rag/data/cpr_embeddings_output/
     documents = ( Dataset(BaseDocument).load_from_remote("s3://project-rag/data/documents_all/").filter_by_language("en") )
     
     generate_queries_flow(sc, documents, get_db(), args.tag, args.limit, args.offset)

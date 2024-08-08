@@ -4,9 +4,34 @@ from pathlib import Path
 import os
 from typing import Optional
 from dotenv import load_dotenv, find_dotenv
+from src.flows.utils import get_secret
 
 load_dotenv(find_dotenv(), override=True)
 
+## Load our environment variables -- we may be running in a serverless environment, so we need to load them from AWS SSM
+get_secret("VERTEX_AI_PROJECT")
+get_secret("GOOGLE_APPLICATION_CREDENTIALS_BASE64")
+get_secret("GOOGLE_API_KEY")
+
+# Lol i can't believe I have to do this again why don't anyone just let you pass actual data rather than file paths
+from pathlib import Path
+
+VESPA_URL: Optional[str] = get_secret("VESPA_URL")
+
+cert_content = get_secret("VESPA_CERT")
+key_content = get_secret("VESPA_KEY")
+
+cert_path = Path("cert.pem")
+key_path = Path("key.pem")
+
+with open(cert_path, "w") as cert_file:
+    cert_file.write(cert_content)
+
+with open(key_path, "w") as key_file:
+    key_file.write(key_content)
+
+VESPA_CERT: str = str(cert_path.resolve())
+VESPA_KEY: str = str(key_path.resolve())
 
 def _assert_path_exists(path: Path):
     """Check a path exists. This should be used for all paths that can be specified from the .env file."""
@@ -36,9 +61,6 @@ STREAMLIT_MOCK_GENERATION: bool = _environment_variable_is_truthy(
     "STREAMLIT_MOCK_GENERATION"
 )
 
-VESPA_URL: Optional[str] = os.getenv("VESPA_URL")
-VESPA_CERT: Optional[str] = os.getenv("VESPA_CERT_LOCATION")
-VESPA_KEY: Optional[str] = os.getenv("VESPA_KEY_LOCATION")
 
 root_templates_folder = Path("src/prompts/prompt_templates")
 response_templates_folder = root_templates_folder / "response"
