@@ -1,5 +1,4 @@
 import jinja2
-import tiktoken
 import json
 
 from dataclasses import dataclass, asdict
@@ -15,7 +14,6 @@ from src.config import VERTEX_MODEL_ENDPOINTS
 
 
 LOGGER = get_logger(__name__)
-enc_gpt_4 = tiktoken.encoding_for_model("gpt-4-32k")
 
 
 @dataclass
@@ -27,30 +25,33 @@ class PromptTemplateArguments:
     rule: Optional[str]
 
 def render_document_text_for_llm(document_text: str, model: str) -> str:
-    """Truncates the document text based on the model's token limit."""
-    _encoded_doc = enc_gpt_4.encode(document_text)
+    """Truncates the document text based on the model's token limit.
+    
+    Uses fast approximation from https://stackoverflow.com/questions/76216113/how-can-i-count-tokens-before-making-api-call so can remove tiktoken => all the torch dependencies from docker image for size optimisation.  
+    """
+    _encoded_doc_length = len(document_text) * (1/2.718281828) + 2
     
     if model in VERTEX_MODEL_ENDPOINTS:
         truncation_amnt = 1500
         max_tokens = VERTEX_MODEL_ENDPOINTS[model]["params"]["max_tokens"] if "max_tokens" in VERTEX_MODEL_ENDPOINTS[model]["params"] else VERTEX_MODEL_ENDPOINTS[model]["params"]["max_output_tokens"]
         
-        if len(_encoded_doc) > max_tokens:
+        if _encoded_doc_length > max_tokens:
             truncate_to = max_tokens-truncation_amnt
             LOGGER.warning(
-                f"Document too long [{len(_encoded_doc)}], truncating to {truncate_to} tokens."
+                f"Document too long [{_encoded_doc_length}], truncating to {truncate_to} tokens."
             )
-            return enc_gpt_4.decode(_encoded_doc[:truncate_to])
+            return document_text[:int(truncate_to)]
         return document_text
 
-    if len(_encoded_doc) > 30000 and "gemini" not in model:
+    if _encoded_doc_length > 30000 and "gemini" not in model:
         LOGGER.warning(
-            f"Document too long [{len(_encoded_doc)}], truncating to 30k tokens."
+            f"Document too long [{_encoded_doc_length}], truncating to 30k tokens."
         )
 
         if "16k" in model:
-            return enc_gpt_4.decode(_encoded_doc[:14500])
+            return document_text[:int(14500 * 2.718281828)]
         else:
-            return enc_gpt_4.decode(_encoded_doc[:30000])
+            return document_text[:int(30000 * 2.718281828)]
 
     return document_text
 

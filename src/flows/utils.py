@@ -13,6 +13,9 @@ from peewee import Database, PostgresqlDatabase
 import json
 
 from prefect.runtime import flow_run
+from prefect_aws import AwsCredentials
+
+aws_credentials_block = AwsCredentials.load("aws-credentials-block-labs")
 
 def log_essentials() -> str:
     version = prefect.__version__
@@ -28,10 +31,11 @@ def get_secret(key: str) -> str:
     """Returns a secret -- selecting from env if exists, otherwise query AWS SSM and add to env
     
     Queries AWS SSM for the given secret"""
+
     if key in os.environ:
         return os.environ[key]
     
-    ssm_client = boto3.client('ssm', region_name="eu-west-1")
+    ssm_client = aws_credentials_block.get_boto3_session().client('ssm', region_name="eu-west-1")
     
     try:
         secret = ssm_client.get_parameter(Name=f"/RAG/{key}", WithDecryption=True)
@@ -54,7 +58,6 @@ def get_db() -> Database:
     )
     return db
 
-
 @task
 def send_slack_message(message):
     logger = get_run_logger()
@@ -62,9 +65,11 @@ def send_slack_message(message):
     # Retrieve Slack credentials from AWS Parameter Store
     webhook_url = get_secret("PREFECT_SLACK_WEBHOOK")
     
+    flow_url = f"https://app.prefect.cloud/account/4b1558a0-3c61-4849-8b18-3e97e0516d78/workspace/1753b4f0-6221-4f6a-9233-b146518b4545/flows/flow/{get_flow_run_id()}"
+    
     # Set the payload for the POST request
     payload = {
-        "text": f"Flow {get_flow_run_id()}: {message}"
+        "text": f"{message} (<{flow_url}|Flow details>)"
     }
 
     # Send the POST request to the Slack webhook URL
