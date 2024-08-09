@@ -15,7 +15,6 @@ from src.flows.utils import get_db
 
 import uuid
 import hashlib
-import argilla as rg
 
 import src.config as config
 from src.online.inference import LLMTypes

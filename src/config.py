@@ -48,19 +48,9 @@ def _environment_variable_is_truthy(env_var: str) -> bool:
 root = Path(__file__).parent
 
 EMBEDDING_MODEL_NAME: str = "BAAI/bge-small-en-v1.5"
-CHROMA_DB_PATH: Path = root / "../chroma_db_local"
-CHROMA_COLLECTION_NAME: str = "cpr_documents_langchain"
-CHROMA_SERVER_HOST: Optional[str] = os.getenv("CHROMA_SERVER_HOST")
-USE_LOCAL_CHROMA_DB: bool = _environment_variable_is_truthy("USE_LOCAL_CHROMA_DB")
-PIPELINE_CACHE_PATH: Path = root / "../data/pipeline_cache"
-DOCUMENT_DIR = Path(os.getenv("DOCUMENT_DIR", root / "../data/documents"))
 WANDB_PROJECT_NAME: str = "rag-prototype-langchain"
 LOGGING_LEVEL: str = os.environ.get("LOGGING_LEVEL", "DEBUG")
 WANDB_ENABLED: bool = not _environment_variable_is_truthy("DISABLE_WANDB")
-STREAMLIT_MOCK_GENERATION: bool = _environment_variable_is_truthy(
-    "STREAMLIT_MOCK_GENERATION"
-)
-
 
 root_templates_folder = Path("src/prompts/prompt_templates")
 response_templates_folder = root_templates_folder / "response"
@@ -117,5 +107,3 @@ VERTEX_MODEL_ENDPOINTS = {
         }
     },
 }
-
-_assert_path_exists(DOCUMENT_DIR)

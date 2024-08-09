@@ -25,7 +25,8 @@ LOGGER = get_logger(__name__)
 class RagController:
     def __init__(self, observe: bool = True):
         self.vespa = VespaController()
-        self.observability = ObservabilityManager()
+        
+        #self.observability = ObservabilityManager()
         self.observe = observe
         
     def get_llm(self, type: str, model: str) -> Union[LLM, BaseChatModel]:  # type: ignore

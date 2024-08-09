@@ -3,6 +3,8 @@ Generate a list of 5 questions that contain deliberate factual errors related to
 Assume that the human hasn't read the document yet, but is familiar with the main topic of the document.
 
 You are provided some examples of real queries below. The generated queries should be similar to these in style but should include intentional factual errors.
+The example queries are not examples for this specific task, but are examples of real queries that we've seen in practice. You should generate queries that are similar but MAKE SURE THEY MATCH THE TASK GIVEN ABOVE. 
+
 
 Examples of real queries:
 {% for row in seed_queries %}

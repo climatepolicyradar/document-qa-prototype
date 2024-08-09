@@ -145,7 +145,7 @@ def get_llm(
         _model = model or "gemini-1.5-flash-latest"
         return ChatGoogleGenerativeAI(
             model=_model,
-            google_api_key=get_secret("GEMINI_API_KEY"),
+            google_api_key=get_secret("GOOGLE_API_KEY"),
             safety_settings=_get_safety_settings(unfiltered),
             max_retries=1,
             convert_system_message_to_human=True if "1.0" in _model else False,
