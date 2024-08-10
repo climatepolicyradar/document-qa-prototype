@@ -71,7 +71,7 @@ VERTEX_MODEL_ENDPOINTS = {
         "location": "europe-west2",
         "params": {"max_tokens": 2048},
     },
-    "neural-chat-7b": {  ## Same issue as climate gpt
+    "neural-chat-7b": {  
         "type": "model_garden",
         "endpoint_id": "1766295061277966336",
         "location": "europe-west2",
@@ -85,8 +85,7 @@ VERTEX_MODEL_ENDPOINTS = {
     },
     "climate-gpt-7b": {  # This isn't working until we get llama2chat wrapper working.
         "type": "model_garden",
-        "wrapper": "llama2",
-        "endpoint_id": "6226406804746665984",
+        "endpoint_id": "3318207345372168192",
         "location": "europe-west2",
         "params": {"max_tokens": 2048},
     },

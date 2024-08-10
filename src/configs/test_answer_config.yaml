@@ -1,9 +1,9 @@
 models:
   - generation_engine: vertexai
-    model: mistral-nemo
+    model: climate-gpt-7b
 model_selection: all
 prompt_templates:
-  - prompt_template: evals-answers-0.0.1/branch
+  - prompt_template: evals-answers-0.0.1/chain_of_thought
 template_selection: all
 retrieval:
   - retrieval_window: 1
