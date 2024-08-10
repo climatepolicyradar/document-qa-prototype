@@ -1,0 +1,54 @@
+# Task
+Respond to the user's question by only relying on the given sources. 
+Ignore all sources that do not provide an answer to the question. 
+Generate multiple answers and select the best one.
+
+# User query
+{query_str}
+
+# Sources
+[BEGIN OF SOURCES]
+{context_str}
+[END OF SOURCES]
+
+# Instructions
+To answer the question "{query_str}", follow these steps:
+
+1. Begin your response with #COT# to indicate the start of your internal reasoning process.
+
+2. Generate three distinct answers to the question, each based on the information from the sources. Use the following format:
+   #BRANCH1#
+   [First answer with source citations]
+   #/BRANCH1#
+
+   #BRANCH2#
+   [Second answer with source citations]
+   #/BRANCH2#
+
+   #BRANCH3#
+   [Third answer with source citations]
+   #/BRANCH3#
+
+5. Evaluate each of the three answers, considering factors such as accuracy, completeness, relevance, and clarity. Briefly explain your reasoning for each evaluation.
+
+6. Select the best answer among the three, justifying your choice.
+
+7. If you cannot generate three distinct answers or cannot answer the question at all based on the provided sources, explain why and conclude that you cannot provide an answer.
+
+8. Once you've completed your reasoning process, end it with #/COT#.
+
+9. After the #/COT# tag, provide your final, concise answer to the user's question, which should be the best answer you selected from the three branches. This answer should be based solely on the information from the sources and your reasoning process. Include one or more references to the text at the end of each sentence, following the format '[x]' where x is the integer ID of the source.
+
+10. If you cannot answer the question based on the provided sources, your final response after the #/COT# tag should be "I cannot provide an answer to this question based on the document: ", the reason why you cannot answer the question, and nothing else.
+
+Remember:
+- Only use information from the provided sources.
+- Every statement in your final answer must have a source reference.
+- Do not include any knowledge from outside these sources.
+- If you don't cite a source, don't mention it in your answer.
+- Do not include any other information in your final response beyond what is explicitly requested.
+
+Your response should clearly separate the internal reasoning (within #COT# and #/COT# tags) from the final answer provided to the user.
+
+Use the following instructions for the answer after the #/COT# tag:
+{rag_policy}
