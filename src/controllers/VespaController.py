@@ -23,7 +23,7 @@ class VespaController:
         query: str,
         document_id: str,
         hits: int = 20,
-        rank_profile: str = "splade",
+        rank_profile: str = "dense_bge_small",
     ) -> dict:
         """Query Vespa for a set of passages"""
         # Connect here not on construction so connection is not held open for long
@@ -104,8 +104,6 @@ class VespaController:
 
         vespa_query_body = {"yql": yql, "hits": 100}
 
-        LOGGER.info(f"🤔 Vespa query body: {vespa_query_body}")
-
         ## TODO should content field be text_block_window or text_block?
         return CPRVespaRetriever(
             controller=self,
@@ -145,7 +143,6 @@ class CPRVespaRetriever(VespaRetriever):
         if "errors" in root:
             raise RuntimeError(json.dumps(root["errors"]))
 
-        print(response)
         docs = []
         if "children" in root:
             for child in root["children"]:

@@ -1,7 +1,6 @@
 import argparse
 from prefect import flow, get_run_logger
 from src.controllers.DocumentController import DocumentController
-from src.controllers.EvaluationController import EvaluationController
 from src.controllers.RagController import RagController
 from src.controllers.ScenarioController import ScenarioController
 from src.flows.tasks.qa_tasks import generate_answer_task
@@ -11,41 +10,43 @@ from src.flows.utils import get_db
 from src.models.data_models import Scenario
 from src.flows.tasks.data_tasks import get_queries, save_answer
 
+
 @flow
-def generate_answers_flow(
-    scenario: Scenario,
-    db: Database,
-    tag: str
-):
+def generate_answers_flow(scenario: Scenario, db: Database, tag: str):
     dc = DocumentController()
-    rc = RagController(observe=False)
-    
+    rc = RagController()
+
     logger = get_run_logger()
     logger.info(f"📋 DB: {db}")
-    
+
     queries = get_queries(db, tag)
     logger.info(f"💡 Generating answers for {len(queries)} queries with tag {tag}")
-    
-    for i,query in enumerate(queries):
+
+    for i, query in enumerate(queries[:1]):
         scenario.document = dc.create_base_document(query.document_id)
-                
+
         logger.info(f"📋 Scenario: {scenario}")
         logger.info(f"💡 Generating answer for query: {query}")
-        result = generate_answer_task.submit(query, scenario, tag, rc).wait()
-        
-        #Save to database
-        save_answer.submit(tag, result, db, query).wait()
-        
-    
+        result = generate_answer_task(query, scenario, tag, rc)
+
+        # Save to database
+        save_answer(tag, result, db, query)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate queries for documents")
     parser.add_argument("tag", type=str, help="Tag for grouping queries together")
-    parser.add_argument("--config", type=str, default="src/configs/answer_config.yaml", help="Path to the config file")
+    parser.add_argument(
+        "--config",
+        type=str,
+        default="src/configs/answer_config.yaml",
+        help="Path to the config file",
+    )
     args = parser.parse_args()
-    
+
     sc = ScenarioController.from_config(args.config)
-    
+
     db = get_db()
-    
+
     for scenario in sc.scenarios:
         generate_answers_flow(scenario, db, args.tag)

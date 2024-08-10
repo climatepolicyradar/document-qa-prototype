@@ -79,13 +79,14 @@ def rag_chain(
                 "documents": retriever,
                 "query_str": itemgetter("query_str"),
                 "document_id": itemgetter("document_id"),
+                "document_metadata_context_str": itemgetter(
+                    "document_metadata_context_str"
+                ),
             }
         )
         | RunnablePassthrough.assign(context_str=format_docs_into_context_str)
         | RunnablePassthrough.assign(template=citation_template)
-        | RunnablePassthrough.assign(
-            llm_output=lambda x: (print(x), llm.invoke(x["template"]))[1]
-        )
+        | RunnablePassthrough.assign(llm_output=lambda x: llm.invoke(x["template"]))
         | RunnablePassthrough.assign(
             answer=lambda x: StrOutputParser().invoke(x["llm_output"])
         )
@@ -102,11 +103,14 @@ def format_docs_into_context_str(
 
     The documents are separated by newlines and prefixed with their source ID in square brackets.
     """
+    context_str = ""
+    if retrieval_output["document_metadata_context_str"]:
+        context_str += f"(in {retrieval_output['document_metadata_context_str']})"
 
     separator = "\n\n"
     doc_str = separator
     for source_id, document in enumerate(retrieval_output["documents"]):
-        doc_str += f"{separator} [{source_id}] {document.page_content}"  # type: ignore
+        doc_str += f"{separator} [{source_id}] {document.page_content} {context_str}"  # type: ignore
 
     if text_is_too_long_for_model(doc_str):
         LOGGER.warning("Document is too long for model, it will be truncated")

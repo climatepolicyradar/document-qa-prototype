@@ -8,14 +8,13 @@ from langchain_community.llms.titan_takeoff import TitanTakeoff
 from langchain_community.llms.huggingface_text_gen_inference import (
     HuggingFaceTextGenInference,
 )
-from langchain_experimental.chat_models.llm_wrapper import Llama2Chat
 from langchain_openai import ChatOpenAI
 from langchain_core.callbacks import (
     AsyncCallbackManagerForLLMRun,
     CallbackManagerForLLMRun,
 )
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_google_vertexai import ChatVertexAI, VertexAI, VertexAIModelGarden
+from langchain_google_vertexai import VertexAI
 from langchain_community.llms.huggingface_endpoint import HuggingFaceEndpoint
 from google.generativeai.types.safety_types import HarmBlockThreshold, HarmCategory
 import google.auth
@@ -95,6 +94,7 @@ class MockRagLLM(LLM):
     def _identifying_params(self) -> Mapping[str, Any]:
         return {}
 
+
 def get_llm(
     type: str,
     model: Optional[str] = None,
@@ -124,9 +124,7 @@ def get_llm(
     elif _llm_type == LLMTypes.OPENAI:
         # 'seed' is part of the openai api:
         # https://cookbook.openai.com/examples/reproducible_outputs_with_the_seed_parameter
-        return ChatOpenAI(
-            model=model or "gpt-3.5-turbo", temperature=0, seed=42
-        )
+        return ChatOpenAI(model=model or "gpt-3.5-turbo", temperature=0, seed=42)
 
     elif _llm_type == LLMTypes.TITAN:
         return TitanTakeoff(
@@ -181,15 +179,25 @@ def get_llm(
             os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = temp_file_path
 
             model = model or "rag-meta-llama-3-1-8b-instruct"
-            location = config.VERTEX_MODEL_ENDPOINTS[model]["location"] 
-            
+            location = config.VERTEX_MODEL_ENDPOINTS[model]["location"]
+
             assert project_id is not None, f"Project for model {model} not found"
-            
+
             if config.VERTEX_MODEL_ENDPOINTS[model]["type"] == "model_garden":
                 endpoint = config.VERTEX_MODEL_ENDPOINTS[model]["endpoint_id"]
 
                 assert endpoint is not None, f"Endpoint for model {model} not found"
 
+                # https://europe-west2-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/europe-west2/endpoints/${ENDPOINT_ID}:
+                llm = VertexAI(
+                    full_model_name=f"projects/{project_id}/locations/{location}/endpoints/{endpoint}",
+                    location=location,
+                    project=project_id,
+                    max_tokens=config.VERTEX_MODEL_ENDPOINTS[model]["params"][
+                        "max_tokens"
+                    ],
+                )
+                """
                 llm = VertexAIModelGarden(
                     project=project_id or "",
                     endpoint_id=endpoint or "",
@@ -197,8 +205,9 @@ def get_llm(
                     allowed_model_args=["temperature", "max_tokens"],
                     safety_settings=_get_safety_settings(unfiltered),
                     max_retries=1,
-                )
-                
+                    max_tokens=config.VERTEX_MODEL_ENDPOINTS[model]["params"]["max_tokens"]
+                )"""
+
             elif config.VERTEX_MODEL_ENDPOINTS[model]["type"] == "vertex_api":
                 publisher = config.VERTEX_MODEL_ENDPOINTS[model]["publisher"]
                 llm = VertexAI(
@@ -208,10 +217,14 @@ def get_llm(
                     allowed_model_args=["temperature", "max_output_tokens"],
                     safety_settings=_get_safety_settings(unfiltered),
                     max_retries=1,
+                    max_output_tokens=config.VERTEX_MODEL_ENDPOINTS[model]["params"][
+                        "max_output_tokens"
+                    ],
                 )
 
         return llm
-    
+
+
 def _get_safety_settings(unfiltered: bool) -> dict:
     if unfiltered:
         return {
@@ -219,6 +232,6 @@ def _get_safety_settings(unfiltered: bool) -> dict:
             HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
             HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
             HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-    }
+        }
     else:
         return {}

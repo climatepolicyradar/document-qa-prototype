@@ -33,6 +33,7 @@ with open(key_path, "w") as key_file:
 VESPA_CERT: str = str(cert_path.resolve())
 VESPA_KEY: str = str(key_path.resolve())
 
+
 def _assert_path_exists(path: Path):
     """Check a path exists. This should be used for all paths that can be specified from the .env file."""
     if not path.exists():
@@ -66,44 +67,34 @@ if encoded_creds:
 VERTEX_MODEL_ENDPOINTS = {
     "llama3-8b-chat": {
         "type": "model_garden",
-        "endpoint_id": "8290603546454261760", 
+        "endpoint_id": "8290603546454261760",
         "location": "europe-west2",
-        "params": {
-            "max_tokens": 8000
-        }
+        "params": {"max_tokens": 2048},
     },
-    "neural-chat-7b": { ## Same issue as climate gpt
+    "neural-chat-7b": {  ## Same issue as climate gpt
         "type": "model_garden",
         "endpoint_id": "1766295061277966336",
         "location": "europe-west2",
-        "params": {
-            "max_tokens": 8000
-        }
+        "params": {"max_tokens": 2048},
     },
     "llama3-1-8b-instruct": {
         "type": "model_garden",
         "endpoint_id": "7530902584312201216",
         "location": "europe-west2",
-        "params": {
-            "max_tokens": 8000
-        }
-    }, 
-    "climate-gpt-7b": { # This isn't working until we get llama2chat wrapper working.
+        "params": {"max_tokens": 2048},
+    },
+    "climate-gpt-7b": {  # This isn't working until we get llama2chat wrapper working.
         "type": "model_garden",
         "wrapper": "llama2",
         "endpoint_id": "6226406804746665984",
         "location": "europe-west2",
-        "params": {
-            "max_tokens": 8000
-        }
+        "params": {"max_tokens": 2048},
     },
     "mistral-nemo": {
         "type": "vertex_api",
         "model_name": "mistral-nemo@2407",
         "publisher": "mistralai",
         "location": "europe-west4",
-        "params": {
-            "max_output_tokens": 2048
-        }
+        "params": {"max_output_tokens": 2048},
     },
 }
