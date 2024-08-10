@@ -1,21 +1,19 @@
-
 from typing import Optional
 from src.vespa.connection import connect_to_vespa_cloud
-from src.vespa.query import get_rank_profiles, make_request
 from pydantic import BaseModel
 from vespa.application import Vespa
 from src.logger import get_logger
-import argilla as rg
 
 
 LOGGER = get_logger(__name__)
+
 
 def get_vespa_app() -> Vespa:
     LOGGER.info("Connecting to Vespa Cloud...")
     vespa_app = connect_to_vespa_cloud()
     LOGGER.info("Success")
     return vespa_app
-    
+
 
 class VespaTextBlock(BaseModel):
     """Attributes of text blocks in Vespa"""

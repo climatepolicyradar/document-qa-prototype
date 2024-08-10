@@ -1,6 +1,5 @@
 import sys
-from src.flows.hello_flow import hello_flow
-from src.flows.e2e_flow import e2e_flow
+from src.flows.generate_queries_flow import query_control_flow
 import dotenv
 import os
 from prefect.blocks.system import JSON
@@ -11,10 +10,7 @@ dotenv.load_dotenv()
 DEFAULT_JOB_VARIABLES = JSON.load("default-job-variables-prefect-mvp-labs").value
 DOCKER_REGISTRY = os.getenv("DOCKER_REGISTRY")
 
-all_flows = [
-    hello_flow,
-    e2e_flow
-]
+all_flows = [query_control_flow]
 
 base_image = DeploymentImage(
     name=f"{DOCKER_REGISTRY}/prefect-rag-labs",
@@ -39,5 +35,4 @@ for curr_flow in all_flows:
         name=f"rag-{curr_flow.__name__}",
         description=f"{curr_flow.__name__} flow deployed from: document-qa-prototype",
         **flow_args,
-    ) # type: ignore
-
+    )  # type: ignore

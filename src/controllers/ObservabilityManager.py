@@ -1,14 +1,26 @@
 import os
 from langfuse.callback import CallbackHandler
 from src.logger import get_logger
+from src.flows.utils import get_secret
 
 LOGGER = get_logger(__name__)
 
+
 class ObservabilityManager:
-    
+    """Manager for observability tools"""
+
     def __init__(self):
-        LOGGER.info(f"Initializing ObservabilityManager for {os.environ['LANGFUSE_HOST']}")
+        """Initialize the observability manager"""
+        # Load env vars
+        get_secret("LANGFUSE_HOST")
+        get_secret("LANGFUSE_SECRET_KEY")
+        get_secret("LANGFUSE_PUBLIC_KEY")
+
+        LOGGER.info(
+            f"Initializing ObservabilityManager for {os.environ['LANGFUSE_HOST']}"
+        )
         self.langfuse_handler: CallbackHandler = CallbackHandler()
-    
-    def get_tracing_callback(self):
+
+    def get_tracing_callback(self) -> CallbackHandler:
+        """Returns the tracing callback for Langfuse"""
         return self.langfuse_handler

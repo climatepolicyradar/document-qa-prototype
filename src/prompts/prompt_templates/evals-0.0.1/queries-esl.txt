@@ -1,5 +1,8 @@
+# Task
 Generate a list of 5 queries that could be asked by a human with english as a second language of the document that is provided below.
 Assume that the human hasn't read the document yet, but is familiar with the main topic of the document.
+
+# Examples
 You are provided some examples of real queries below from proficient english speakers. The generated queries should be similar to these but with varying levels of english proficiency, including spelling and grammar.
 The example queries are not examples for this specific task, but are examples of real queries that we've seen in practice. You should generate queries that are similar but MAKE SURE THEY MATCH THE TASK GIVEN ABOVE. 
 
@@ -9,6 +12,7 @@ Examples of real queries:
 - {{ row.text }}
 {% endfor %}
 
+# Rules and instructions
 - Generate queries with a diverse range of levels of english proficiency.
 - Avoid generating similar queries
 - Generate queries that aren't related to each other.

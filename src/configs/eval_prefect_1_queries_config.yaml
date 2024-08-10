@@ -1,8 +1,8 @@
 models:
   - generation_engine: gemini
     model: gemini-1.5-pro
-  - generation_engine: vertexai
-    model: mistral-nemo
+  - generation_engine: gemini
+    model: gemini-1.5-flash
 model_selection: all
 prompt_templates:
   - prompt_template: evals-0.0.1/queries-ambiguous

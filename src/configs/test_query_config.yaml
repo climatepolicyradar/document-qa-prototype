@@ -1,0 +1,13 @@
+models:
+  - generation_engine: gemini
+    model: gemini-1.5-flash
+model_selection: all
+prompt_templates:
+  - prompt_template: evals-0.0.1/queries-jailbreak
+template_selection: all
+seed_queries_path: s3://project-rag/data/queries/seed_samples.jsonl
+retrieval:
+  - retrieval_window: 1
+    top_k: 6
+retrieval_selection: random
+documents_per_query: 1 # set this to 1 if the query file contains document ids
