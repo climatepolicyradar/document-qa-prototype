@@ -1,5 +1,6 @@
 import sys
 from src.flows.generate_queries_flow import query_control_flow
+from src.flows.generate_answers_flow import answer_control_flow
 import dotenv
 import os
 from prefect.blocks.system import JSON
@@ -10,7 +11,7 @@ dotenv.load_dotenv()
 DEFAULT_JOB_VARIABLES = JSON.load("default-job-variables-prefect-mvp-labs").value
 DOCKER_REGISTRY = os.getenv("DOCKER_REGISTRY")
 
-all_flows = [query_control_flow]
+all_flows = [answer_control_flow]
 
 base_image = DeploymentImage(
     name=f"{DOCKER_REGISTRY}/prefect-rag-labs",

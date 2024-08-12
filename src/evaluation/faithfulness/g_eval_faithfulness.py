@@ -29,5 +29,5 @@ class GEvalFaithfulness(GEval):
         return self.template.render(
             sources=generation.rag_response.retrieved_passages_as_string(),  # type: ignore
             question=generation.rag_request.query,
-            answer=generation.rag_response.text,  # type: ignore
+            answer=generation.get_answer(),  # type: ignore
         )

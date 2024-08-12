@@ -33,7 +33,7 @@ class Vectara(Evaluator):
             return None
 
         context = generation.rag_response.retrieved_passages_as_string()  # type: ignore
-        response = generation.rag_response.text  # type: ignore
+        response = generation.get_answer()  # type: ignore
 
         pairs = zip([context], [response])
 

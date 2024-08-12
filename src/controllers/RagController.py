@@ -38,8 +38,9 @@ class RagController:
     def __init__(self, observe: bool = True):
         self.vespa = VespaController()
 
-        self.observability = ObservabilityManager()
-        self.observe = observe
+        #self.observability = ObservabilityManager()
+        self.observe = False
+        # TODO self.observe = observe
 
     def get_llm(
         self, type: str, model: str, unfiltered: bool = False
@@ -183,7 +184,6 @@ class RagController:
                 "document_id": scenario.document.document_id,
                 "document_metadata_context_str": f"'{scenario.document.document_name}' pub. {scenario.document.document_metadata.publication_ts} (country:{scenario.document.document_metadata.geography})",
             },
-            config={"callbacks": [self.observability.get_tracing_callback()]},
         )
 
         response_text = response["answer"]
@@ -259,6 +259,7 @@ class RagController:
 
         LOGGER.info(f"📝 Extracted assertions: {assertions}")
         return assertions
+    
 
     def _parse_response_into_queries(
         self, response_text: str, document_id: str, scenario: Scenario, tag: str

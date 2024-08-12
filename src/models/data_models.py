@@ -272,6 +272,21 @@ class RAGResponse(BaseModel):
             return True
 
         return False
+    
+    
+    def extract_inner_monologue(self) -> dict:
+        """Extract the inner monologue from the RAG answer. Inner monologue is the text between #COT# and #/COT#"""
+        result = {
+            "inner_monologue": "",
+            "answer": "",
+        }
+        if "#COT#" in self.text and "#/COT#" in self.text:
+            result["inner_monologue"] = self.text.split("#COT#")[1].split("#/COT#")[0]
+            result["answer"] = self.text.split("#/COT#")[1]
+        else:
+            result["answer"] = self.text
+            
+        return result
 
     def retrieved_passages_as_string(self) -> str:
         """Returns a string representation of the retrieved passages."""
@@ -340,6 +355,12 @@ class EndToEndGeneration(BaseModel):
         return (
             f"EndToEndGeneration({self.rag_request.query}, {self.rag_response.__str__})"
         )
+        
+    def get_answer(self, remove_cot: bool = True) -> str:
+        """Returns the answer from the RAG response. If remove_cot is True, the inner monologue is removed before returning, otherwise the full response is returned."""
+        if remove_cot:
+            return self.rag_response.extract_inner_monologue()["answer"]
+        return self.rag_response.text
 
     @model_validator(mode="before")
     @classmethod

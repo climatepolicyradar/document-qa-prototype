@@ -50,7 +50,7 @@ class GEval(Evaluator, ABC):
 
         if score is not None:
             return Score(
-                score=(score - 1) / 4,  # type: ignore
+                score=(score - 1) / 4.0,  # type: ignore
                 type=self.TYPE,
                 name=self.NAME,
                 gen_uuid=generation.uuid,  # type: ignore

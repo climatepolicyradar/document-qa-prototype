@@ -2,8 +2,7 @@ from src.models.data_models import EndToEndGeneration
 from pydantic import BaseModel, confloat
 from typing import Optional
 from abc import ABC, abstractmethod
-
-
+from src.logger import get_logger
 class Score(BaseModel):
     """Score model"""
 
@@ -41,9 +40,14 @@ class MultiAxisEvaluator(Evaluator):
 
     def evaluate(self, generation: EndToEndGeneration) -> list[Score]:
         """Evaluates along the axes of the evaluators"""
+        logger = get_logger(__name__)
         scores = []
         for evaluator in self.evaluators:
-            score = evaluator.evaluate(generation)
+            try:
+                score = evaluator.evaluate(generation)
+            except Exception as e:
+                logger.error(f"Error evaluating {generation.uuid} with {evaluator.NAME}: {e}")
+                continue
             if isinstance(score, list):
                 scores.extend(score)
             elif isinstance(score, Score):

@@ -1,6 +1,6 @@
 import pytest
 
-from src.evaluation.formatting import Formatting
+from src.evaluation.formatting.formatting import Formatting
 
 
 @pytest.mark.parametrize(

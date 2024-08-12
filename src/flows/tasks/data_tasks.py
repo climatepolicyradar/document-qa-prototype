@@ -50,6 +50,18 @@ def get_queries(db: Database, tag: str = None) -> list[Query]:
     logger.info(f"🎲 Got {len(queries)} queries with tag {tag}")
     return queries
 
+def get_unanswered_queries(db: Database, tag: str, query_tag: str, model: str, prompt: str, querstion_prompts: list[str]) -> list[Query]:
+    logger = get_run_logger()
+    logger.info(f"Getting unanswered queries for tag {tag} with model {model} and prompt {prompt}")
+    curr_answer_ids = [qa.query_id for qa in QAPair.select().where(QAPair.pipeline_id == tag).where(QAPair.model == model).where(QAPair.prompt == prompt)]
+        
+    logger.info(f"🎲 Got {len(curr_answer_ids)} answers for tag {tag} with model {model} and prompt {prompt}")
+    
+    queries = [query.to_query() for query in DBQuery.select().where(DBQuery.tag == query_tag, DBQuery.id.not_in(curr_answer_ids), DBQuery.prompt.in_(querstion_prompts))]
+    
+    logger.info(f"🎲 Got {len(queries)} unanswered queries for tag {tag} with model {model} and prompt {prompt}")
+    return queries
+
 @task(
     retries=5,
     retry_delay_seconds=exponential_backoff(backoff_factor=20),
@@ -74,6 +86,19 @@ def get_answers(db: Database, tag: str) -> list[QAPair]:
     answers = [qa for qa in QAPair.select().where(QAPair.pipeline_id == tag)]
     logger.info(f"🎲 Got {len(answers)} answers")
     return answers
+
+
+def get_answers_needing_evals(db: Database, tag: str, limit: int = 10) -> list[QAPair]:
+    logger = get_run_logger()
+    answers = [qa for qa in QAPair.select().where(QAPair.pipeline_id == tag).where(QAPair.evals == {}).limit(limit)]
+    logger.info(f"🎲 Got {len(answers)} answers needing evals")
+    return answers
+
+def get_answer_by_id(db: Database, id: int) -> QAPair:
+    logger = get_run_logger()
+    answer = QAPair.get_or_none(QAPair.id == id)
+    logger.info(f"🎲 Got answer with id {id}")
+    return answer
 
 @flow
 def init_db_and_tables(db: Database, drop_tables: bool = False):

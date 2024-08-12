@@ -17,21 +17,24 @@ get_secret("GOOGLE_API_KEY")
 from pathlib import Path
 
 VESPA_URL: Optional[str] = get_secret("VESPA_URL")
+VESPA_CERT: Optional[str] = get_secret("VESPA_CERT_LOCATION")
+VESPA_KEY: Optional[str] = get_secret("VESPA_KEY_LOCATION")
 
-cert_content = get_secret("VESPA_CERT")
-key_content = get_secret("VESPA_KEY")
+if not VESPA_CERT or VESPA_CERT == "" or not VESPA_KEY or VESPA_KEY == "":
+    cert_content = get_secret("VESPA_CERT")
+    key_content = get_secret("VESPA_KEY")
 
-cert_path = Path("cert.pem")
-key_path = Path("key.pem")
+    cert_path = Path("cert.pem")
+    key_path = Path("key.pem")
 
-with open(cert_path, "w") as cert_file:
-    cert_file.write(cert_content)
+    with open(cert_path, "w") as cert_file:
+        cert_file.write(cert_content)
 
-with open(key_path, "w") as key_file:
-    key_file.write(key_content)
+    with open(key_path, "w") as key_file:
+        key_file.write(key_content)
 
-VESPA_CERT: str = str(cert_path.resolve())
-VESPA_KEY: str = str(key_path.resolve())
+    VESPA_CERT: str = str(cert_path.resolve())
+    VESPA_KEY: str = str(key_path.resolve())
 
 
 def _assert_path_exists(path: Path):
@@ -96,4 +99,10 @@ VERTEX_MODEL_ENDPOINTS = {
         "location": "europe-west4",
         "params": {"max_output_tokens": 2048},
     },
+    "patronus-lynx": {
+        "type": "model_garden",
+        "endpoint_id": "5923117517340934144",
+        "location": "europe-west2",
+        "params": {"max_tokens": 2048},
+    }
 }
