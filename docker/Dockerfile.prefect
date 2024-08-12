@@ -1,0 +1,30 @@
+# https://github.com/michaeloliverx/python-poetry-docker-example/blob/master/docker/Dockerfile
+FROM prefecthq/prefect:2-python3.10
+WORKDIR /opt/prefect
+
+ARG PREFECT_API_KEY
+
+# activate our virtual environment here entrypoint
+#. /opt/prefect/opt/pysetup/.venv/bin/activate
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=off \
+    PIP_DISABLE_PIP_VERSION_CHECK=on \
+    PIP_DEFAULT_TIMEOUT=100 \
+    POETRY_VIRTUALENVS_IN_PROJECT=true \
+    POETRY_NO_INTERACTION=1 
+
+COPY ./poetry.lock ./pyproject.toml ./
+RUN pip install poetry
+RUN poetry export --without-hashes --format=requirements.txt > requirements.txt
+
+# honestly poetry in docker + prefect is a faff
+RUN pip install -r requirements.txt
+
+## Copy source code
+COPY ./src /opt/prefect/src
+COPY ./data/docs_metadata.csv /opt/prefect/data/
+
+RUN prefect config set PREFECT_API_URL="https://api.prefect.cloud/api/accounts/4b1558a0-3c61-4849-8b18-3e97e0516d78/workspaces/1753b4f0-6221-4f6a-9233-b146518b4545"
+RUN prefect config set PREFECT_API_KEY="$PREFECT_API_KEY"

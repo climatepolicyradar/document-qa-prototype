@@ -1,0 +1,38 @@
+# https://github.com/michaeloliverx/python-poetry-docker-example/blob/master/docker/Dockerfile
+FROM python:3.10 as python-base
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=off \
+    PIP_DISABLE_PIP_VERSION_CHECK=on \
+    PIP_DEFAULT_TIMEOUT=100 \
+    POETRY_HOME="/opt/poetry" \
+    POETRY_VIRTUALENVS_IN_PROJECT=true \
+    POETRY_NO_INTERACTION=1 \
+    PYSETUP_PATH="/opt/pysetup" \
+    VENV_PATH="/opt/pysetup/.venv"
+
+ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
+
+# We copy our Python requirements here to cache them
+# and install only runtime deps using poetry
+WORKDIR $PYSETUP_PATH
+COPY ./poetry.lock ./pyproject.toml ./
+RUN pip install poetry
+RUN poetry install --no-dev 
+
+FROM prefecthq/prefect:2-python3.10 as runtime
+
+COPY --from=python-base $VENV_PATH $VENV_PATH
+
+## Add in our custom entrypoint script
+COPY ./docker/entrypoint.sh /opt/prefect/entrypoint.sh
+RUN chmod +x /opt/prefect/entrypoint.sh
+
+## Copy source code
+COPY ./src /opt/prefect/src
+
+## Make sure poetry is installed
+RUN pip install poetry
+COPY ./poetry.lock ./pyproject.toml /opt/prefect/
