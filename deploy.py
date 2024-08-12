@@ -4,11 +4,13 @@ from src.flows.generate_answers_flow import answer_control_flow
 import dotenv
 import os
 from prefect.blocks.system import JSON
-from prefect.deployments import DeploymentImage
+from prefect.deployments.runner import DeploymentImage
 
 dotenv.load_dotenv()
 
 DEFAULT_JOB_VARIABLES = JSON.load("default-job-variables-prefect-mvp-labs").value
+DEFAULT_JOB_VARIABLES["cpu"] = 1024
+DEFAULT_JOB_VARIABLES["memory"] = 2048
 DOCKER_REGISTRY = os.getenv("DOCKER_REGISTRY")
 
 all_flows = [answer_control_flow]
@@ -18,7 +20,6 @@ base_image = DeploymentImage(
     dockerfile="docker/Dockerfile.prefect",
     tag="latest",
     stream_progress_to=sys.stdout,
-    buildargs={"PREFECT_API_KEY": os.getenv("PREFECT_API_KEY")},
 )
 
 flow_args = {

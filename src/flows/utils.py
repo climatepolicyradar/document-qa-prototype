@@ -56,18 +56,18 @@ def get_secret(key: str) -> str:
 
 # This is a temp hack while platform team is having good work/life balanece
 def get_labs_session(set_as_default: bool = False) -> boto3.Session:
-    labs_key = json.loads(get_secret("LABS_CREDS"))
+    aws_credentials_block = AwsCredentials.load("aws-credentials-block-labs")
 
     session = boto3.Session(
-        aws_access_key_id=labs_key["key"],
-        aws_secret_access_key=labs_key["secret"],
+        aws_access_key_id=aws_credentials_block.aws_access_key_id,
+        aws_secret_access_key=aws_credentials_block.aws_secret_access_key,
         region_name="eu-west-1",
     )
 
     if set_as_default:
         boto3.setup_default_session(
-            aws_access_key_id=labs_key["key"],
-            aws_secret_access_key=labs_key["secret"],
+            aws_access_key_id=aws_credentials_block.aws_access_key_id,
+            aws_secret_access_key=aws_credentials_block.aws_secret_access_key,
             region_name="eu-west-1",
         )
 
