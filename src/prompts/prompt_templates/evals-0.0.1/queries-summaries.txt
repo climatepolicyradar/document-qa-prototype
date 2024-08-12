@@ -1,13 +1,19 @@
+# Task
 Generate a list of 5 queries that could be asked by a human of the document that is provided below. The queries should require summarisation of lengthy sections of the document to answer. 
 
 Assume that the human hasn't read the document yet, but is familiar with the main topic of the document.
+
+# Examples
 You are provided some examples of real queries below. The generated queries should be similar to these.
+
+The example queries are not examples for this specific task, but are examples of real queries that we've seen in practice. You should generate queries that are similar but MAKE SURE THEY MATCH THE TASK GIVEN ABOVE. 
 
 Examples of real queries:
 {% for row in seed_queries %}
 - {{ row.text }}
 {% endfor %}
 
+# Rules and instructions
 - Generate queries that require summarisation of lengthy sections of the document to answer.
 - Avoid generating similar queries
 - Generate queries that aren't related to each other.

@@ -1,5 +1,5 @@
 from src.evaluation.evaluator import Score
-from src.evaluation.system_response import SystemResponse
+from src.evaluation.system_response.system_response import SystemResponse
 from tests.evaluation.util import e2e_data
 
 import pytest

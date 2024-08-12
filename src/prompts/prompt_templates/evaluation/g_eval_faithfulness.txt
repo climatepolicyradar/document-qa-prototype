@@ -15,7 +15,8 @@ Evaluation Steps:
 2. Read the answer and compare it to the article. Check if the answer contains any factual errors that are not supported by the article.
 3. Assign a score for consistency based on the Evaluation Criteria.
 
-
+- 5 is the highest score, indicating that the answer is factually consistent with the sources.
+- 1 is the lowest score, indicating that the answer is not factually consistent with the sources.
 - Output ONLY the score, no other text.
 - Output ONLY the score as a number. 
 - The output should pass an is_digit() check.

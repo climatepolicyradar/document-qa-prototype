@@ -130,6 +130,7 @@ def main():
         # Prepare data
         data = []
         for qa_pair in qa_pairs:
+            print(qa_pair)
             evals = qa_pair.evals
             row = {
                 "Question": qa_pair.question,
@@ -145,19 +146,22 @@ def main():
             row['query_length'] = len(qa_pair.question)
             data.append(row)
 
-        df = pd.DataFrame(data)
+        if len(data) > 0:
+            df = pd.DataFrame(data)
+            print(df.head())
 
-        # Display results
-        st.subheader("QA Pairs")
-        selected_row = st.dataframe(
-            df[['Question', 'Answer', 'vectara_score', 'geval_score', 'policy_score']].style
-            .format(precision=3)
-            .background_gradient(subset=['vectara_score', 'geval_score', 'policy_score'], axis=0, low=0.0, high=1.0),
-            height=400,
-            use_container_width=True,
-            selection_mode="single-row"
-        )
-
+            # Display results
+            st.subheader("QA Pairs")
+            selected_row = st.dataframe(
+                df[['Question', 'Answer', 'vectara_score', 'geval_score', 'policy_score']].style
+                .format(precision=3)
+                .background_gradient(subset=['vectara_score', 'geval_score', 'policy_score'], axis=0, low=0.0, high=1.0),
+                height=400,
+                use_container_width=True,
+                selection_mode="single-row"
+            )
+        else:
+            st.write("No data found for the given pipeline ID.")
         """
         if selected_row:
             with st.sidebar:

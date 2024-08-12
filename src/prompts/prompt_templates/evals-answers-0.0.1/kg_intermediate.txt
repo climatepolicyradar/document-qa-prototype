@@ -1,0 +1,54 @@
+# Task
+Respond to the user's question by only relying on the given sources. 
+Ignore all sources that do not provide an answer to the question. 
+Use a knowledge graph intermediate step before answering.
+
+# User query
+{query_str}
+
+# Sources
+[BEGIN OF SOURCES]
+{context_str}
+[END OF SOURCES]
+
+# Instructions
+To answer the question "{query_str}", follow these steps:
+
+1. Begin your response with #COT# to indicate the start of your internal reasoning process.
+
+2. Generate a textual representation of a knowledge graph based on the relevant facts, assertions, and relationships from the sources. Use the following rules:
+- identify as many relations among entities as possible   
+- output a list in the format [ENTITY 1, TYPE of ENTITY 1, RELATION, ENTITY 2, TYPE of ENTITY 2].
+- Allowed Node Labels:"Person", "Organization", "Location", "Event", "Service", "Object", "Concept", "Policy element", "Commitment", "Action", "Outcome"
+- Allowed Relationship Types: any common verb in present tense
+- Numerical data, like age or other related information, should be incorporated as attributes or properties of the respective nodes.
+- No Separate Nodes for Dates/Numbers: Do not create separate nodes for dates or numerical values. Always attach them as attributes or properties of nodes.
+- Property Format: Properties must be in a key-value format.
+- Quotation Marks: Never use escaped single or double quotes within property values.
+- Naming Convention: Use camelCase for property keys, e.g., "birthDate".
+- Relationship Extraction: Some relationship labels have the same meaning, but may be of different verb tense (e.g., "leader of", "led"), always use the most complete label for that relationship throughout the knowledge graph. 
+- Coreference Resolution: When extracting entities, it's vital to ensure consistency. If an entity, such as "John Doe", is mentioned multiple times in the text but is referred to by different names or pronouns (e.g., "Joe", "he"),  always use the most complete identifier for that entity throughout the knowledge graph. In this example, use "John Doe" as the entity ID.
+
+3. Once you've completed your reasoning process, end it with #/COT#.
+
+4. Using the knowledge graph, synthesize the information to formulate your answer. Explain your thought process and how you're connecting different pieces of information.
+
+5. If the question is a single word or phrase, summarize where this concept is mentioned in the sources, explaining your reasoning for including each reference.
+
+6. If you cannot answer the question based on the provided sources, explain why and conclude that you cannot provide an answer.
+
+7. After the #/COT# tag, provide your final, concise answer to the user's question. This answer should be based solely on the information from the sources and your reasoning process. Include one or more references to the text at the end of each sentence, following the format '[x]' where x is the integer ID of the source.
+
+8. If you cannot answer the question based on the provided sources, your final response after the #/COT# tag should be "I cannot provide an answer to this question based on the document: ", the reason why you cannot answer the question, and nothing else.
+
+Remember:
+- Only use information from the provided sources.
+- Every statement in your final answer must have a source reference.
+- Do not include any knowledge from outside these sources.
+- If you don't cite a source, don't mention it in your answer.
+- Do not include any other information in your final response beyond what is explicitly requested.
+
+Your response should clearly separate the internal reasoning (within #COT# and #/COT# tags) from the final answer provided to the user.
+
+Use the following instructions for writing and formatting the answer that you provide after the #/COT# tag:
+{rag_policy}

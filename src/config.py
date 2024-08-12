@@ -4,8 +4,37 @@ from pathlib import Path
 import os
 from typing import Optional
 from dotenv import load_dotenv, find_dotenv
+from src.flows.utils import get_secret
 
 load_dotenv(find_dotenv(), override=True)
+
+## Load our environment variables -- we may be running in a serverless environment, so we need to load them from AWS SSM
+get_secret("VERTEX_AI_PROJECT")
+get_secret("GOOGLE_APPLICATION_CREDENTIALS_BASE64")
+get_secret("GOOGLE_API_KEY")
+
+# Lol i can't believe I have to do this again why don't anyone just let you pass actual data rather than file paths
+from pathlib import Path
+
+VESPA_URL: Optional[str] = get_secret("VESPA_URL")
+VESPA_CERT: Optional[str] = get_secret("VESPA_CERT_LOCATION")
+VESPA_KEY: Optional[str] = get_secret("VESPA_KEY_LOCATION")
+
+if not VESPA_CERT or VESPA_CERT == "" or not VESPA_KEY or VESPA_KEY == "":
+    cert_content = get_secret("VESPA_CERT")
+    key_content = get_secret("VESPA_KEY")
+
+    cert_path = Path("cert.pem")
+    key_path = Path("key.pem")
+
+    with open(cert_path, "w") as cert_file:
+        cert_file.write(cert_content)
+
+    with open(key_path, "w") as key_file:
+        key_file.write(key_content)
+
+    VESPA_CERT: str = str(cert_path.resolve())
+    VESPA_KEY: str = str(key_path.resolve())
 
 
 def _assert_path_exists(path: Path):
@@ -23,22 +52,9 @@ def _environment_variable_is_truthy(env_var: str) -> bool:
 root = Path(__file__).parent
 
 EMBEDDING_MODEL_NAME: str = "BAAI/bge-small-en-v1.5"
-CHROMA_DB_PATH: Path = root / "../chroma_db_local"
-CHROMA_COLLECTION_NAME: str = "cpr_documents_langchain"
-CHROMA_SERVER_HOST: Optional[str] = os.getenv("CHROMA_SERVER_HOST")
-USE_LOCAL_CHROMA_DB: bool = _environment_variable_is_truthy("USE_LOCAL_CHROMA_DB")
-PIPELINE_CACHE_PATH: Path = root / "../data/pipeline_cache"
-DOCUMENT_DIR = Path(os.getenv("DOCUMENT_DIR", root / "../data/documents"))
 WANDB_PROJECT_NAME: str = "rag-prototype-langchain"
 LOGGING_LEVEL: str = os.environ.get("LOGGING_LEVEL", "DEBUG")
 WANDB_ENABLED: bool = not _environment_variable_is_truthy("DISABLE_WANDB")
-STREAMLIT_MOCK_GENERATION: bool = _environment_variable_is_truthy(
-    "STREAMLIT_MOCK_GENERATION"
-)
-
-VESPA_URL: Optional[str] = os.getenv("VESPA_URL")
-VESPA_CERT: Optional[str] = os.getenv("VESPA_CERT_LOCATION")
-VESPA_KEY: Optional[str] = os.getenv("VESPA_KEY_LOCATION")
 
 root_templates_folder = Path("src/prompts/prompt_templates")
 response_templates_folder = root_templates_folder / "response"
@@ -54,46 +70,39 @@ if encoded_creds:
 VERTEX_MODEL_ENDPOINTS = {
     "llama3-8b-chat": {
         "type": "model_garden",
-        "endpoint_id": "8290603546454261760", 
+        "endpoint_id": "8290603546454261760",
         "location": "europe-west2",
-        "params": {
-            "max_tokens": 8000
-        }
+        "params": {"max_tokens": 2048},
     },
-    "neural-chat-7b": { ## Same issue as climate gpt
+    "neural-chat-7b": {  
         "type": "model_garden",
         "endpoint_id": "1766295061277966336",
         "location": "europe-west2",
-        "params": {
-            "max_tokens": 8000
-        }
+        "params": {"max_tokens": 2048},
     },
     "llama3-1-8b-instruct": {
         "type": "model_garden",
         "endpoint_id": "7530902584312201216",
         "location": "europe-west2",
-        "params": {
-            "max_tokens": 8000
-        }
-    }, 
-    "climate-gpt-7b": { # This isn't working until we get llama2chat wrapper working.
+        "params": {"max_tokens": 2048},
+    },
+    "climate-gpt-7b": {  # This isn't working until we get llama2chat wrapper working.
         "type": "model_garden",
-        "wrapper": "llama2",
-        "endpoint_id": "6226406804746665984",
+        "endpoint_id": "3318207345372168192",
         "location": "europe-west2",
-        "params": {
-            "max_tokens": 8000
-        }
+        "params": {"max_tokens": 2048},
     },
     "mistral-nemo": {
         "type": "vertex_api",
         "model_name": "mistral-nemo@2407",
         "publisher": "mistralai",
         "location": "europe-west4",
-        "params": {
-            "max_output_tokens": 2048
-        }
+        "params": {"max_output_tokens": 2048},
     },
+    "patronus-lynx": {
+        "type": "model_garden",
+        "endpoint_id": "5923117517340934144",
+        "location": "europe-west2",
+        "params": {"max_tokens": 2048},
+    }
 }
-
-_assert_path_exists(DOCUMENT_DIR)

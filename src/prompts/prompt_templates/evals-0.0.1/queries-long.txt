@@ -1,8 +1,12 @@
+# Task
 Generate a list of 5 very long or multi-part questions related to the document's content. These queries should test the system's ability to handle complex, multi-faceted inquiries.
 
 Assume that the human hasn't read the document yet, but is familiar with the main topic of the document.
 
+# Examples
 You are provided some examples of real queries below. The generated queries should be similar to these in style but should be significantly longer or consist of multiple parts.
+
+The example queries are not examples for this specific task, but are examples of real queries that we've seen in practice. You should generate queries that are similar but MAKE SURE THEY MATCH THE TASK GIVEN ABOVE. 
 
 Examples of real queries:
 {% for row in seed_queries %}

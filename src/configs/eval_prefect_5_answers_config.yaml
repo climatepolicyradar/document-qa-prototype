@@ -1,0 +1,16 @@
+models:
+  - generation_engine: gemini
+    model: gemini-1.5-pro
+model_selection: all
+prompt_templates:
+  - prompt_template: evals-answers-0.0.1/chain_of_thought
+  - prompt_template: evals-answers-0.0.1/explain_assumptions
+  - prompt_template: evals-answers-0.0.1/basic_answer
+  - prompt_template: evals-answers-0.0.1/branch
+  - prompt_template: evals-answers-0.0.1/kg_intermediate
+template_selection: all
+retrieval:
+  - retrieval_window: 1
+    top_k: 6
+retrieval_selection: random
+documents_per_query: 1 # set this to 1 if the query file contains document ids

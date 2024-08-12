@@ -9,7 +9,7 @@ from src.flows.tasks.qa_tasks import generate_answer_task
 from peewee import Database
 from src.flows.utils import get_db
 from src.models.data_models import Scenario
-from src.flows.tasks.data_tasks import get_answers
+from src.flows.tasks.data_tasks import get_answers_needing_evals
 
 @flow
 def generate_evals_flow(
@@ -20,20 +20,26 @@ def generate_evals_flow(
     
     ec = EvaluationController()
     
-    answers = get_answers(db, tag)
-    logger.info(f"💡 Generating evals for {len(answers)} answers with tag {tag}")
-    
-    for answer in answers:
-        gen = answer.to_end_to_end_generation()
-        logger.info(f"📋 Generation: {gen}")
+    answers = get_answers_needing_evals(db, tag, limit=5)
+    while len(answers) > 0:
+        logger.info(f"💡 Generating evals for {len(answers)} answers with tag {tag}")
         
-        result = ec.evaluate_all(gen)
-        logger.info(f"📋 Result: {result}")
+        for answer in answers:
+            
+            gen = answer.to_end_to_end_generation()
+            logger.info(f"📋 {gen.rag_request.query}: {gen.rag_response.text}")
+            
+            result = ec.evaluate_all(gen)
+            logger.info(f"📋 Result: {result}")
+            
+            for score in result:
+                answer.evals[f"{score.name}-{score.type}"] = score.model_dump_json()
+            
+            print(answer.evals)
+            answer.save()
         
-        for score in result:
-            answer.evals[f"{score.name}-{score.type}"] = score.model_dump_json()
-        
-        answer.save()
+        logger.info(f"🔄 Getting more answers to evaluate")
+        answers = get_answers_needing_evals(db, tag, limit=5)
     
     
 if __name__ == "__main__":

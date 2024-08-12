@@ -28,7 +28,9 @@ class EvaluationController():
         self.instantiated = [
             self.get_evaluator("g_eval_policy"), 
             self.get_evaluator("g_eval_faithfulness"), 
-            self.get_evaluator("vectara")
+            self.get_evaluator("vectara"),
+            self.get_evaluator("system_response"),
+            self.get_evaluator("patronus_lynx")
         ] # The registry doesn't instantiate the evaluators properly, so load them separately
     
     def get_all_evaluators(self):
@@ -61,4 +63,5 @@ class EvaluationController():
      
     def evaluate_all(self, result: EndToEndGeneration):
         eval: MultiAxisEvaluator = MultiAxisEvaluator(self.instantiated)
+        
         return eval.evaluate(result)

@@ -1,0 +1,45 @@
+# Task
+Respond to the user's question by only relying on the given sources. 
+Ignore all sources that do not provide an answer to the question. 
+Use chain-of-thought reasoning to arrive at your answer, including an explanation of assumptions and potential ambiguities.
+
+# User query
+{query_str}
+
+# Sources
+[BEGIN OF SOURCES]
+{context_str}
+[END OF SOURCES]
+
+# Instructions
+To answer the question "{query_str}", follow these steps:
+
+1. Begin your response with #COT# to indicate the start of your internal reasoning process.
+
+2. Generate a set of assumptions and potentially ambiguous or easily misinterpreted aspects of the context. Use the following format:
+   - Assumption 1: [Explanation]
+   - Potential ambiguity 1: [Explanation]
+
+3. Output #/COT# to indicate the end of your internal reasoning process.
+
+4. Synthesize the information from relevant sources to formulate your final answer, taking care to address and avoid the scenarios identified in the assumptions and ambiguities step. As you reason through this process, explain your thought process and how you're connecting different pieces of information.
+
+5. If the question is a single word or phrase, summarize where this concept is mentioned in the sources, explaining your reasoning for including each reference.
+
+6. If you cannot answer the question based on the provided sources, explain why and conclude that you cannot provide an answer.
+
+7. Your final answer to the user's question should be based solely on the information from the sources and your reasoning process, taking into account the assumptions and ambiguities you identified. Include one or more references to the text at the end of each sentence, following the format '[x]' where x is the integer ID of the source. Format multiple references as '[x] [y]' where x and y are the integer IDs of the sources.
+
+10. If you cannot answer the question based on the provided sources, your final response after the #/COT# tag should be "I cannot provide an answer to this question based on the document: ", the reason why you cannot answer the question, and nothing else.
+
+Remember:
+- Only use information from the provided sources.
+- Every statement in your final answer must have a source reference.
+- Do not include any knowledge from outside these sources.
+- If you don't cite a source, don't mention it in your answer.
+- Do not include any other information in your final response beyond what is explicitly requested.
+
+Your response should clearly separate the internal reasoning (within #COT# and #/COT# tags) from the final answer provided to the user.
+
+Use the following instructions for the answer after the #/COT# tag:
+{rag_policy}

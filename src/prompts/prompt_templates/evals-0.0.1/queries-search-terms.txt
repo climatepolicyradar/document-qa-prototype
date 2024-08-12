@@ -1,7 +1,9 @@
+# Task
 Generate a list of 5 search term queries that could be asked by a human of the document that is provided below.
 Assume that the human hasn't read the document yet, but is familiar with the main topic of the document.
 
 - Generate search keywords only, not questions
+- Don't use too many words
 - Generate search keywords that are relevant to the document and that a human might use to search for information in the document
 - Avoid generating similar queries
 - Generate queries that aren't related to each other.
