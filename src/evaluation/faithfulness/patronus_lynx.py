@@ -12,6 +12,7 @@ import src.config as config
 
 LOGGER = get_logger(__name__)
 
+
 @evaluators.register("patronus_lynx")
 class PatronusLynx(Evaluator):
     """PatronusLynx model for Faithfulness"""
@@ -25,15 +26,15 @@ class PatronusLynx(Evaluator):
         self.template = jinja_template_loader(
             config.evaluation_templates_folder / "patronus_lynx.txt"
         )
-        
+
     def evaluate(
         self, generation: EndToEndGeneration, prompt: Optional[str] = None
     ) -> Optional[Score]:
         """Evaluates the generation"""
-        
+
         if prompt is None:
             prompt = self.get_prompt(generation)
-        
+
         response = self.model.invoke(prompt)
         result = {}
         try:
@@ -41,12 +42,12 @@ class PatronusLynx(Evaluator):
         except json.JSONDecodeError as e:
             LOGGER.error(f"Error decoding JSON: {result}\n\n {e}")
             return None
-        
+
         return Score(
             score=1 if result["SCORE"] == "PASS" else 0,
             type=self.TYPE,
             name=self.NAME,
-            gen_uuid=generation.uuid,
+            gen_uuid=generation.uuid or "",
             comments=result["REASONING"],
         )
 

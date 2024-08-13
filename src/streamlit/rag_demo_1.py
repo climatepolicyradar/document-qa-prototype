@@ -1,18 +1,18 @@
+# type: ignore
+
 import streamlit as st
 import wandb
 
 from dotenv import load_dotenv, find_dotenv
-from langchain_community.embeddings import HuggingFaceBgeEmbeddings
 
-from src.models.data_models import Prompt, RAGRequest
+from src.models.data_models import Prompt
 from src.streamlit.app_helpers import (
     get_image_base64,
     _find_source_indices_in_rag_response,
     _make_text_safe_for_streamlit_write,
-    _format_window_as_source,
 )
 from src.controllers.RagController import RagController
-from src.controllers.ScenarioController import ScenarioController, Scenario
+from src.controllers.ScenarioController import Scenario
 from src.controllers.DocumentController import DocumentController
 from src import config
 from src.logger import get_logger
@@ -25,17 +25,21 @@ if config.WANDB_ENABLED and not wandb.run:
     LOGGER.info("Enabling weights and biases logging...")
     wandb.init(project=config.WANDB_PROJECT_NAME)
 
+
 @st.cache_resource
 def get_rag_controller():
     return RagController()
+
 
 @st.cache_resource
 def get_document_controller():
     return DocumentController()
 
+
 @st.cache_data
 def get_available_documents():
     return rc.get_available_documents()
+
 
 rc = get_rag_controller()
 dc = get_document_controller()
@@ -83,8 +87,7 @@ user = st.text_input("Your name:")
 document_data = get_available_documents()
 
 document_data_strings = [
-    f"{doc.document_name} ({doc.document_metadata.geography})"
-    for doc in document_data
+    f"{doc.document_name} ({doc.document_metadata.geography})" for doc in document_data
 ]
 
 document_id = None
@@ -97,7 +100,8 @@ if user:
             (
                 doc
                 for doc in document_data
-                if f"{doc.document_name} ({doc.document_metadata.geography})" == selected_doc
+                if f"{doc.document_name} ({doc.document_metadata.geography})"
+                == selected_doc
             ),
             None,
         )

@@ -32,6 +32,15 @@ def log_essentials() -> str:
 
 
 def _get_default_ssm_client() -> boto3.client:
+    if (
+        "AWS_ACCESS_KEY_ID" not in os.environ
+        or "AWS_SECRET_ACCESS_KEY" not in os.environ
+    ):
+        return boto3.client(
+            "ssm",
+            region_name="eu-west-1",
+        )
+
     return boto3.client(
         "ssm",
         region_name="eu-west-1",
