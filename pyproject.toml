@@ -41,6 +41,7 @@ prefect-docker = "^0.5.4"
 prefect-aws = "^0.4.19"
 urllib3 = ">=1.26,<2"
 transformers = "^4.44.0"
+matplotlib-venn = "^1.1.1"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.0.247"
