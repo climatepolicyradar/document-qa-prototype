@@ -34,7 +34,12 @@ from src.prompts.template_building import (
 )
 from src.config import root_templates_folder
 
-db = get_db()
+
+try:
+    db = get_db()
+except Exception as e:
+    print("Error connecting to database: ", e)
+    db = None
 
 
 class Prompt(BaseModel):

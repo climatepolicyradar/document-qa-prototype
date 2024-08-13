@@ -1,9 +1,6 @@
-import wandb
-
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
-from langchain_community.embeddings import HuggingFaceBgeEmbeddings
 from langchain.globals import set_verbose, set_debug
 from dotenv import load_dotenv, find_dotenv
 from src.controllers.DocumentController import DocumentController
@@ -14,7 +11,6 @@ from cpr_data_access.models import BaseDocument
 
 from src.logger import get_logger
 from src.models.data_models import RAGRequest
-from src import config
 from src.online.inference import LLMTypes
 
 LOGGER = get_logger(__name__)
@@ -44,16 +40,7 @@ async def lifespan(app: FastAPI):
     load_dotenv(find_dotenv(), override=True)
     LOGGER.info("Environment variables loaded...", extra={".env found?": find_dotenv()})
 
-    # Enable logging to weights and biases prompts unless explicitly disabled
-    # by setting the DISABLE_WANDB environment variable to "true" or "1"
-    if config.WANDB_ENABLED:
-        LOGGER.info("Enabling weights and biases logging...")
-        wandb.init(project=config.WANDB_PROJECT_NAME)
-
     LOGGER.info("Getting vector store index...")
-    app_context["encoder"] = HuggingFaceBgeEmbeddings(
-        model_name=config.EMBEDDING_MODEL_NAME
-    )
     app_context["rag_controller"] = RagController()
     LOGGER.info("Vector store index ready...")
 
