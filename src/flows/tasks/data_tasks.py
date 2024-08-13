@@ -1,6 +1,6 @@
 from prefect import task, get_run_logger, flow
 
-from peewee import Database
+from peewee import Database, fn
 
 from src.controllers.VespaController import VespaController
 from src.models.data_models import EndToEndGeneration, Query, QAPair, DBQuery
@@ -123,6 +123,7 @@ def get_answers_needing_evals(db: Database, tag: str, limit: int = 10) -> list[Q
         for qa in QAPair.select()
         .where(QAPair.pipeline_id == tag)
         .where(QAPair.evals == {})
+        .order_by(fn.Random())
         .limit(limit)
     ]
     logger.info(f"🎲 Got {len(answers)} answers needing evals")

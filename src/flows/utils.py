@@ -41,8 +41,6 @@ def _get_default_ssm_client() -> boto3.client:
             region_name="eu-west-1",
         )
 
-    print(os.environ["AWS_ACCESS_KEY_ID"])
-    print(os.environ["AWS_SECRET_ACCESS_KEY"])
     return boto3.client(
         "ssm",
         region_name="eu-west-1",

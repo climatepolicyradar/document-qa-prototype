@@ -61,7 +61,7 @@ app.add_middleware(
 LOGGER.info("App and context created")
 
 
-@app.get("/health")
+@app.get("/")
 async def get_health():
     """
     Get application health.

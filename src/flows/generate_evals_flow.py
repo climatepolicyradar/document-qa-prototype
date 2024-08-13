@@ -2,14 +2,14 @@ import argparse
 from prefect import flow, get_run_logger
 from src.controllers.EvaluationController import EvaluationController
 
-from peewee import Database
 from src.flows.utils import get_db
 from src.flows.tasks.data_tasks import get_answers_needing_evals
 
 
 @flow
-def generate_evals_flow(db: Database, tag: str, limit: int = 5):
+def generate_evals_flow(tag: str, limit: int = 5):
     logger = get_run_logger()
+    db = get_db()
 
     ec = EvaluationController()
 
@@ -48,6 +48,4 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    db = get_db()
-
-    generate_evals_flow(db, args.tag, args.limit)
+    generate_evals_flow(args.tag, args.limit)
