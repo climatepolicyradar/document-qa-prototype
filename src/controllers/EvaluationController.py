@@ -32,9 +32,20 @@ class EvaluationController:
         ]  # The registry doesn't instantiate the evaluators properly, so load them separately
 
     def get_all_evaluators(self):
+        """Retrieve all registered evaluators."""
         return self.instantiated
 
     def get_evaluator(self, evaluator: str, kwargs: Optional[dict] = None) -> Evaluator:
+        """
+        Get a specific evaluator by name.
+
+        Args:
+            evaluator (str): The name of the evaluator to retrieve.
+            kwargs (Optional[dict]): Additional keyword arguments for the evaluator.
+
+        Returns:
+            Evaluator: The requested evaluator instance.
+        """
         if kwargs is None:
             kwargs = {}
 
