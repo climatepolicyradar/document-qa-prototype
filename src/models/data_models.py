@@ -269,7 +269,7 @@ class RAGRequest(BaseModel):
         """Returns the RAGRequest as a Scenario object."""
         return Scenario(
             model=self.model if self.model else "",
-            generation_engine=str(self.generation_engine),
+            generation_engine=str(self.generation_engine.value),
             prompt=Prompt.from_template(prompt_template=self.prompt_template),
             document=dc.create_base_document(document_id=self.document_id),
             retrieval_window=self.retrieval_window,

@@ -12,6 +12,9 @@ from cpr_data_access.models import BaseDocument
 from src.logger import get_logger
 from src.models.data_models import RAGRequest
 from src.online.inference import LLMTypes
+from src import config
+
+config.logger.info("Here we go yo")  # I just want ruff to stop removing my import.
 
 LOGGER = get_logger(__name__)
 DEBUG = False

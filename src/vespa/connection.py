@@ -1,6 +1,7 @@
 from vespa.application import Vespa
+from src.logger import get_logger
 
-from src.config import VESPA_URL, VESPA_CERT, VESPA_KEY
+logger = get_logger(__name__)
 
 
 def connect_to_vespa_cloud() -> Vespa:
@@ -11,6 +12,11 @@ def connect_to_vespa_cloud() -> Vespa:
     :raises ConnectionError: if the connection to Vespa fails
     :return Vespa: Vespa application object
     """
+    from src.config import VESPA_URL, VESPA_CERT, VESPA_KEY
+
+    logger.info(
+        f"Connecting to Vespa at {VESPA_URL} with cert {VESPA_CERT} and key {VESPA_KEY}"
+    )
 
     if any(var is None for var in [VESPA_URL, VESPA_CERT, VESPA_KEY]):
         raise ValueError(

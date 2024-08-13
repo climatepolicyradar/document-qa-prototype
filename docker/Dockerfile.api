@@ -22,6 +22,7 @@ RUN prefect config set PREFECT_API_KEY="$PREFECT_API_KEY"
 ENV PYTHONPATH=/app
 # Make port available to the world outside this container
 EXPOSE 80
+EXPOSE 443
 
 # Run the application with Uvicorn
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "80"]
