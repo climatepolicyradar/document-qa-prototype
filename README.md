@@ -67,6 +67,10 @@ Some datasets that are related to this codebase are:
 - [ ] AWS Prefect aws-credentials-block-labs is still sandbox parameter store. (for Mark)
 - [ ] Write script to pull out all TODOs from the codebase and add them to this readme
 
+## API
+### Getting a RAG answer
+
+
 ## Temporary notes
 
 ```
