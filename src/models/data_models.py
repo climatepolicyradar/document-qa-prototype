@@ -7,8 +7,7 @@ import datetime
 from wandb.sdk.data_types.trace_tree import Trace
 from cpr_data_access.models import BaseDocument
 from langchain_core.prompts import ChatPromptTemplate
-import datetime
-from peewee import *  # type: ignore
+from peewee import Model, AutoField, TextField, CharField, UUIDField, DateTimeField, ForeignKeyField
 from playhouse.postgres_ext import BinaryJSONField
 from src.controllers.DocumentController import DocumentController
 from src.flows.utils import get_db
@@ -191,6 +190,7 @@ class DBQuery(Model):
 
 
 class QAPair(Model):
+    """Represents a Question-Answer pair in the database."""
     id = AutoField()
     document_id = CharField(null=True)
     model = CharField(null=True)
@@ -225,7 +225,7 @@ class QAPair(Model):
 
 
 class RAGRequest(BaseModel):
-    """Request object for the RAG pipeline"""
+    """Request object for the RAG pipeline."""
 
     model_config = ConfigDict(use_enum_values=True)
 
