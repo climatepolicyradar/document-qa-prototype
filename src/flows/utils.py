@@ -38,7 +38,6 @@ def get_secret(key: str) -> str:
         return os.environ[key]
 
     try:
-        print("Trying prefect aws creds")
         ssm_client = aws_credentials_block.get_boto3_session().client(
             "ssm", region_name="eu-west-1"
         )
@@ -53,7 +52,6 @@ def get_secret(key: str) -> str:
 
     try:
         secret = ssm_client.get_parameter(Name=f"/RAG/{key}", WithDecryption=True)
-        print(f"Secret: {secret}")
         os.environ[key] = secret["Parameter"]["Value"]
     except Exception as e:
         print(f"Failed to retrieve secret: {str(e)}")

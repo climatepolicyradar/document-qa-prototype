@@ -18,13 +18,14 @@ LOGGER = get_logger(__name__)
 
 class EvaluationController:
     """Controller for managing and executing evaluations."""
+
     evaluators: Registry
     instantiated: list[Evaluator]
 
     def __init__(self):
         self.evaluators = evaluators
-        LOGGER.info(f"Evaluators: {self.evaluators.get_all()}")
         self.instantiated = [
+            self.get_evaluator("formatting"),
             self.get_evaluator("g_eval_policy"),
             self.get_evaluator("g_eval_faithfulness"),
             self.get_evaluator("system_response"),
@@ -53,16 +54,12 @@ class EvaluationController:
         if evaluator not in self.evaluators:
             for path in Path("src/evaluation").rglob("*.py"):
                 if path.stem.strip() == evaluator.strip():
-                    LOGGER.info(f"Found evaluator: {path.stem} {evaluator}")
                     try:
                         _ = importlib.import_module(
                             f".{path.stem}", f"src.evaluation.{path.parent.stem}"
                         )
-                        LOGGER.info("LOADED SUCCESSFULLY?")
-                        LOGGER.info(_)
                         break
-                    except ModuleNotFoundError as e:
-                        LOGGER.warning(f"Module not found: {path.stem} {evaluator} {e}")
+                    except ModuleNotFoundError:
                         continue
 
         if evaluator not in self.evaluators:
@@ -88,8 +85,8 @@ class EvaluationController:
         Returns:
             The evaluation result from the specified evaluator.
         """
-        evaluator = self.get_evaluator(evaluator, eval_kwargs)
-        return evaluator.evaluate(result)
+        eval_inst = self.get_evaluator(evaluator, eval_kwargs)
+        return eval_inst.evaluate(result)
 
     def evaluate_all(self, result: EndToEndGeneration):
         """

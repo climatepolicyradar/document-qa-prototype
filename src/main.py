@@ -15,7 +15,7 @@ from cpr_data_access.models import BaseDocument
 from src.logger import get_logger
 from src.models.data_models import RAGRequest
 from src import config
-
+from src.online.inference import LLMTypes
 
 LOGGER = get_logger(__name__)
 DEBUG = False
@@ -107,7 +107,7 @@ def do_rag(request: RAGRequest) -> dict:
     ]  # TODO - this is how we can A/B Test! Pick scenarios from config
     request.prompt_template = config_sc.prompt.prompt_template
     request.model = config_sc.model
-    request.generation_engine = config_sc.generation_engine
+    request.generation_engine = LLMTypes(config_sc.generation_engine)
 
     return (
         app_context["rag_controller"]
@@ -120,6 +120,7 @@ def do_rag(request: RAGRequest) -> dict:
 def get_document(document_id: str) -> BaseDocument:
     """
     Get a document by ID.
+
     :param str document_id: The document ID
     :return BaseDocument: The document
     """
