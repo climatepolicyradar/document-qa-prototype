@@ -97,8 +97,8 @@ class GuardrailController:
         """
         Validate text against all guardrails
 
-        :param str text: text to validate
-        :return tuple[bool, dict[GuardrailType, bool]]: overall validation result and individual guardrail results by name
+        :param text: text to validate
+        :return: overall validation result and individual guardrail results by name
         """
         individual_results = {
             guardrail_type: self._validate_text_individual_guardrail(text, guardrail)
