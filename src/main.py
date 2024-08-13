@@ -89,6 +89,7 @@ async def get_health():
 def do_rag(request: RAGRequest) -> dict:
     """
     Perform RAG (Retrieval-Augmented Generation) on a document.
+
     :param str query: The text query
     :param str document_id: The document ID
     :return dict: RAG result
@@ -129,6 +130,9 @@ def get_document(document_id: str) -> BaseDocument:
 def get_document_ids():
     """
     Get unique document IDs from the vector store.
+
+    This function retrieves and returns a list of all unique document IDs
+    available in the vector store for RAG processing.
 
     :return list: list of document IDs
     """

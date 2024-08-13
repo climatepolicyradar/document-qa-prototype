@@ -17,6 +17,7 @@ LOGGER = get_logger(__name__)
 
 
 class EvaluationController:
+    """Controller for managing and executing evaluations."""
     evaluators: Registry
     instantiated: list[Evaluator]
 
@@ -76,10 +77,30 @@ class EvaluationController:
         evaluator: str,
         eval_kwargs: Optional[dict] = None,
     ):
+        """
+        Evaluate the given result using the specified evaluator.
+
+        Args:
+            result (EndToEndGeneration): The generation to evaluate.
+            evaluator (str): The name of the evaluator to use.
+            eval_kwargs (Optional[dict]): Additional keyword arguments for the evaluator.
+
+        Returns:
+            The evaluation result from the specified evaluator.
+        """
         evaluator = self.get_evaluator(evaluator, eval_kwargs)
         return evaluator.evaluate(result)
 
     def evaluate_all(self, result: EndToEndGeneration):
+        """
+        Evaluate the given result using all instantiated evaluators.
+
+        Args:
+            result (EndToEndGeneration): The generation to evaluate.
+
+        Returns:
+            The evaluation results from all instantiated evaluators.
+        """
         eval: MultiAxisEvaluator = MultiAxisEvaluator(self.instantiated)
 
         return eval.evaluate(result)
