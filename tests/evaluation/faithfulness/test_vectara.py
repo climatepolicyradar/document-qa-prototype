@@ -2,7 +2,6 @@ import pytest
 from unittest.mock import patch, Mock
 from src.evaluation.evaluator import Score
 from src.evaluation.faithfulness.vectara import Vectara
-from tests.evaluation.util import e2e_data
 
 @pytest.fixture
 def mock_requests_post():
