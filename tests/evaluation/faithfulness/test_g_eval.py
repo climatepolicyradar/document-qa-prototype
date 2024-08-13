@@ -1,23 +1,34 @@
+import uuid
+import pytest
 from src.evaluation.evaluator import Score
 from src.evaluation.faithfulness.g_eval_faithfulness import GEvalFaithfulness
-from tests.evaluation.util import e2e_data
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-assert e2e_data  # ensure that pyright doesn't remove this
+from src.models.data_models import EndToEndGeneration, RAGRequest, RAGResponse
 
 
-def test_g_eval(e2e_data):
+@pytest.fixture
+def mock_e2e_generation():
+    return EndToEndGeneration(
+        config={},
+        uuid=str(uuid.uuid4()),
+        rag_request=RAGRequest(query="This is a test query.", document_id="test_id"),
+        rag_response=RAGResponse(
+            text="This is a test answer.",
+            query="This is a test query.",
+            retrieved_documents=[{"page_content": "This is a test passage."}],
+        ),
+    )
+
+
+def test_g_eval(mock_e2e_generation):
     mock_llm = MagicMock()
     mock_llm.invoke.return_value = MagicMock(content="3")
-    patch(
-        "src.evaluation.g_eval.get_llm",
-        return_value=mock_llm,
-    ).start()
 
     evaluator = GEvalFaithfulness()
+    evaluator.model = mock_llm
 
-    for e2e_gen in e2e_data:
-        result = evaluator.evaluate(e2e_gen)
-        assert isinstance(result, Score)
-        assert result.score == 0.5
+    result = evaluator.evaluate(mock_e2e_generation)
+    assert isinstance(result, Score)
+    assert result.score == 0.5

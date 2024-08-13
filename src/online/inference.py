@@ -141,9 +141,11 @@ def get_llm(
 
     elif _llm_type == LLMTypes.GEMINI:
         _model = model or "gemini-1.5-flash-latest"
+
+        get_secret("GOOGLE_API_KEY")  # Put in env if not there.
+
         return ChatGoogleGenerativeAI(
             model=_model,
-            google_api_key=get_secret("GOOGLE_API_KEY"),
             safety_settings=_get_safety_settings(unfiltered),
             max_retries=1,
             convert_system_message_to_human=True if "1.0" in _model else False,
@@ -189,24 +191,21 @@ def get_llm(
                 assert endpoint is not None, f"Endpoint for model {model} not found"
 
                 # https://europe-west2-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/europe-west2/endpoints/${ENDPOINT_ID}:
-                llm = VertexAI(
-                    full_model_name=f"projects/{project_id}/locations/{location}/endpoints/{endpoint}",
-                    location=location,
-                    project=project_id,
-                    max_tokens=config.VERTEX_MODEL_ENDPOINTS[model]["params"][
-                        "max_tokens"
-                    ],
-                )
-                """
-                llm = VertexAIModelGarden(
-                    project=project_id or "",
-                    endpoint_id=endpoint or "",
-                    location=location,
-                    allowed_model_args=["temperature", "max_tokens"],
-                    safety_settings=_get_safety_settings(unfiltered),
-                    max_retries=1,
-                    max_tokens=config.VERTEX_MODEL_ENDPOINTS[model]["params"]["max_tokens"]
-                )"""
+                if "max_tokens" in config.VERTEX_MODEL_ENDPOINTS[model]["params"]:
+                    llm = VertexAI(
+                        full_model_name=f"projects/{project_id}/locations/{location}/endpoints/{endpoint}",
+                        location=location,
+                        project=project_id,
+                        max_tokens=config.VERTEX_MODEL_ENDPOINTS[model]["params"][
+                            "max_tokens"
+                        ],
+                    )
+                else:
+                    llm = VertexAI(
+                        full_model_name=f"projects/{project_id}/locations/{location}/endpoints/{endpoint}",
+                        location=location,
+                        project=project_id,
+                    )
 
             elif config.VERTEX_MODEL_ENDPOINTS[model]["type"] == "vertex_api":
                 publisher = config.VERTEX_MODEL_ENDPOINTS[model]["publisher"]
@@ -222,7 +221,7 @@ def get_llm(
                     ],
                 )
 
-        return llm
+        return llm  # pyright: ignore
 
 
 def _get_safety_settings(unfiltered: bool) -> dict:

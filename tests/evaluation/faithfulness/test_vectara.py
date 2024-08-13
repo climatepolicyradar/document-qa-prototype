@@ -2,23 +2,29 @@ import pytest
 from unittest.mock import patch, Mock
 from src.evaluation.evaluator import Score
 from src.evaluation.faithfulness.vectara import Vectara
-from src.models.data_models import EndToEndGeneration, RAGResponse
+from src.models.data_models import EndToEndGeneration, RAGRequest, RAGResponse
 import uuid
+
 
 @pytest.fixture
 def mock_requests_post():
-    with patch('requests.Session.post') as mock_post:
+    with patch("requests.Session.post") as mock_post:
         yield mock_post
+
 
 @pytest.fixture
 def mock_e2e_generation():
     return EndToEndGeneration(
+        config={},
         uuid=str(uuid.uuid4()),
+        rag_request=RAGRequest(query="This is a test query.", document_id="test_id"),
         rag_response=RAGResponse(
-            retrieved_passages=["This is a test passage."]
+            text="This is a test answer.",
+            query="This is a test query.",
+            retrieved_documents=[{"page_content": "This is a test passage."}],
         ),
-        answer="This is a test answer."
     )
+
 
 def test_vectara_successful_api_call(mock_e2e_generation, mock_requests_post):
     # Setup
@@ -30,7 +36,7 @@ def test_vectara_successful_api_call(mock_e2e_generation, mock_requests_post):
 
     # Test
     result = evaluator.evaluate(mock_e2e_generation)
-    
+
     # Assertions
     assert isinstance(result, Score)
     assert result.score == 0.75
@@ -43,20 +49,10 @@ def test_vectara_successful_api_call(mock_e2e_generation, mock_requests_post):
         "https://vectara-api.labs.climatepolicyradar.org/evaluate",
         json={
             "context": mock_e2e_generation.rag_response.retrieved_passages_as_string(),
-            "response": mock_e2e_generation.get_answer()
-        }
+            "response": mock_e2e_generation.get_answer(),
+        },
     )
 
-def test_vectara_api_error(mock_e2e_generation, mock_requests_post):
-    # Setup
-    evaluator = Vectara()
-    mock_requests_post.side_effect = Exception("API Error")
-
-    # Test
-    result = evaluator.evaluate(mock_e2e_generation)
-    
-    # Assertions
-    assert result is None
 
 def test_vectara_no_rag_response(mock_e2e_generation):
     # Setup

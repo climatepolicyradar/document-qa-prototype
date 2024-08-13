@@ -297,6 +297,11 @@ class RAGResponse(BaseModel):
 
     # LangChain uses pydantic v1 internally, so can't pass LangChainDocuments here
 
+    @property
+    def citation_numbers(self) -> set[int]:
+        """Returns the citation numbers that are used to code the sources"""
+        return set(range(0, len(self.retrieved_documents)))
+
     def refused_answer(self) -> bool:
         """
         Whether the model refused to answer the question.

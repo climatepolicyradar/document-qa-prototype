@@ -60,7 +60,7 @@ class ScenarioController:
         return self.config
 
     @classmethod
-    def from_config(cls, config_path: str) -> "ScenarioController":  # type: ignore
+    def from_config(cls, config_path: str) -> "ScenarioController":
         """Load a set of scenarios from a config file"""
         if "yaml" not in config_path:
             config_path = config_path + ".yaml"
@@ -69,8 +69,14 @@ class ScenarioController:
 
         LOGGER.info(f"🤖 Loading scenarios from config: {config_path}")
         config_path_p = Path(config_path)
-        cls.config = yaml.safe_load(config_path_p.read_text())
+        config_details = yaml.safe_load(config_path_p.read_text())
 
+        return cls.from_config_dict(config_details)
+
+    @classmethod
+    def from_config_dict(cls, config: dict) -> "ScenarioController":  # type: ignore
+        """Load a set of scenarios from a config file"""
+        cls.config = config
         LOGGER.info(cls.config)
 
         model_options = cls._create_options(

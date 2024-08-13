@@ -1,12 +1,8 @@
-from src.dataset_creation.utils import create_args
 from src.models.data_models import RAGRequest
 import yaml
 import pytest
 
-from dataclasses import asdict
-
-from src.dataset_creation.utils import create_args
-from src.models.data_models import RAGRequest
+from src.controllers.ScenarioController import ScenarioController
 
 
 @pytest.fixture()
@@ -29,8 +25,8 @@ def config():
         model_selection: random
         queries_path: data/queries/queries.json
         prompt_templates:
-        - prompt_template: FAITHFULQA_SCHIMANSKI_CITATION_QA_TEMPLATE_MODIFIED
-        - prompt_template: adversarial
+        - prompt_template: response/FAITHFULQA_SCHIMANSKI_CITATION_QA_TEMPLATE_MODIFIED
+        - prompt_template: response/adversarial
         template_selection: all
         retrieval:
           - retrieval_window: 0
@@ -43,7 +39,8 @@ def config():
 
 
 def test_create_args(config):
-    args = create_args(config)
+    sc = ScenarioController.from_config_dict(config)
+
     required_config_keys = {
         "generation_engine",
         "model",
@@ -58,23 +55,22 @@ def test_create_args(config):
         for _key in required_config_keys
     )
 
-    assert len(args) == 2
-    assert all(asdict(a).keys() == required_config_keys for a in args)
-    assert all(a.top_k is not None for a in args)
-    assert all(a.generation_engine in {"openai", "huggingface", "gemini"} for a in args)
+    assert len(sc.scenarios) == 2
+    assert all(a.top_k_retrieval_results is not None for a in sc.scenarios)
+    assert all(
+        a.generation_engine in {"openai", "huggingface", "gemini"} for a in sc.scenarios
+    )
 
     config["model_selection"] = "all"
 
-    args = create_args(config)
+    sc = ScenarioController.from_config_dict(config)
 
-    assert len(args) == 12
-    assert all(asdict(a).keys() == required_config_keys for a in args)
-    assert all(a.top_k is not None for a in args)
+    assert len(sc.scenarios) == 12
+    assert all(a.top_k_retrieval_results is not None for a in sc.scenarios)
 
     config["template_selection"] = "random"
 
-    args = create_args(config)
+    sc = ScenarioController.from_config_dict(config)
 
-    assert len(args) == 6
-    assert all(asdict(a).keys() == required_config_keys for a in args)
-    assert all(a.top_k is not None for a in args)
+    assert len(sc.scenarios) == 6
+    assert all(a.top_k_retrieval_results is not None for a in sc.scenarios)

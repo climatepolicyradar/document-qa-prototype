@@ -11,6 +11,10 @@ from src.controllers.EvaluationController import evaluators
 from src.evaluation.evaluator import Score
 from src.logger import get_logger
 
+import nltk
+
+nltk.download("punkt_tab")
+
 logger = get_logger(__name__)
 
 
@@ -34,7 +38,7 @@ class Formatting(Evaluator):
                 comments=["rag_response_is_none"],
             )
 
-        answer = generation.rag_response.text  # type: ignore
+        answer = generation.get_answer()  # type: ignore
         citation_numbers = generation.rag_response.citation_numbers  # type: ignore
 
         well_formatted = True

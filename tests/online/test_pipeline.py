@@ -3,6 +3,7 @@ from langchain_core.documents import Document as LangChainDocument
 from langchain_core.runnables import RunnableLambda
 
 import pytest
+from src.models.data_models import Prompt, Scenario
 
 from src.prompts.template_building import get_citation_template
 from src.online.pipeline import rag_chain
@@ -46,20 +47,32 @@ def test_rag_chain(mocker, mock_retriever):
 
     _chain = rag_chain(
         citation_template=get_citation_template(
-            "FAITHFULQA_SCHIMANSKI_CITATION_QA_TEMPLATE_MODIFIED"
+            "response/FAITHFULQA_SCHIMANSKI_CITATION_QA_TEMPLATE_MODIFIED"
         ),
         llm=llm,
         retriever=retriever,  # type: ignore
-        window_radius=0,
+        scenario=Scenario(
+            id="test",
+            model="mock",
+            generation_engine="llm",
+            prompt=Prompt.from_template(
+                "response/FAITHFULQA_SCHIMANSKI_CITATION_QA_TEMPLATE_MODIFIED"
+            ),
+        ),
     )
 
-    response = _chain.invoke("This is the query")
+    response = _chain.invoke(
+        {
+            "query_str": "This is the query",
+            "document_id": "test",
+            "document_metadata_context_str": "test",
+        }
+    )
 
     assert mock_retriever[0].page_content in response["answer"]
     assert response["answer"].startswith("This is the answer:")
     assert len(response["documents"]) == 2
     assert response["query_str"] == "This is the query"
-    assert [w[0] for w in response["windows"]] == response["documents"]
     assert "[0] This is the first document" in response["context_str"]
     assert "[1] This is the second document" in response["context_str"]
     assert response["llm_output"] == response["answer"]
