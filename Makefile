@@ -15,6 +15,15 @@ run_streamlit_demo:
 run_streamlit_analysis:
 	poetry run python -m streamlit run ./src/streamlit/qa_review_app.py
 
+build_api: export_env_vars
+	docker build -t document-qa-api -f docker/Dockerfile.api .
+
+run_api:
+	docker run --env-file .env.api -p 80:80 document-qa-api 
+
+deploy_api:
+	docker tag document-qa-api:latest 845035659285.dkr.ecr.eu-west-1.amazonaws.com/document-qa-api:latest
+	docker push 845035659285.dkr.ecr.eu-west-1.amazonaws.com/document-qa-api:latest
 
 export_env_vars: 
 	export $(cat .env | xargs)

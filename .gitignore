@@ -164,3 +164,4 @@ cpr-genai-209208195b63.json
 data/
 
 src/frontend/node_modules/
+.aider*

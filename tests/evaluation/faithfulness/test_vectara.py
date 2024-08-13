@@ -1,7 +1,7 @@
 import torch
 
 from src.evaluation.evaluator import Score
-from src.evaluation.faithfulness.vectara import Vectara
+from src.evaluation.vectara.vectara import Vectara
 from tests.evaluation.util import e2e_data
 
 from transformers.modeling_outputs import SequenceClassifierOutput

@@ -1,0 +1,91 @@
+openapi: 3.0.0
+info:
+  title: RAG API
+  version: 1.0.0
+  description: API for Retrieval-Augmented Generation (RAG) operations
+
+paths:
+  /rag:
+    post:
+      summary: Perform RAG operation
+      description: Retrieves relevant documents and generates a response based on the input query and document ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+                  description: The user's question or query
+                document_id:
+                  type: string
+                  description: Identifier for the document to be queried
+              required:
+                - query
+                - document_id
+      responses:
+        '200':
+          description: Successful RAG operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  config:
+                    type: object
+                    description: Configuration settings for the RAG operation
+                  error:
+                    type: null
+                    description: Error information (null if no error occurred)
+                  rag_request:
+                    type: object
+                    description: Details of the RAG request
+                    properties:
+                      config:
+                        type: string
+                      document_id:
+                        type: string
+                      generation_engine:
+                        type: string
+                      mock_generation:
+                        type: boolean
+                      model:
+                        type: string
+                      prompt_template:
+                        type: string
+                      query:
+                        type: string
+                      retrieval_window:
+                        type: integer
+                      top_k:
+                        type: integer
+                      user:
+                        type: null
+                  rag_response:
+                    type: object
+                    description: The generated response and retrieved documents
+                    properties:
+                      highlights:
+                        type: null
+                      query:
+                        type: string
+                      retrieved_documents:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: null
+                            metadata:
+                              type: object
+                            page_content:
+                              type: string
+                            type:
+                              type: string
+                      text:
+                        type: string
+                  uuid:
+                    type: string
+                    description: Unique identifier for the RAG operation

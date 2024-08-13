@@ -7,7 +7,15 @@ import datetime
 from wandb.sdk.data_types.trace_tree import Trace
 from cpr_data_access.models import BaseDocument
 from langchain_core.prompts import ChatPromptTemplate
-from peewee import Model, AutoField, TextField, CharField, UUIDField, DateTimeField, ForeignKeyField
+from peewee import (
+    Model,
+    AutoField,
+    TextField,
+    CharField,
+    UUIDField,
+    DateTimeField,
+    ForeignKeyField,
+)
 from playhouse.postgres_ext import BinaryJSONField
 from src.controllers.DocumentController import DocumentController
 from src.flows.utils import get_db
@@ -31,6 +39,7 @@ db = get_db()
 
 class Prompt(BaseModel):
     """Represents a prompt template for generating responses."""
+
     prompt_template: str
     prompt_content: jinja2.Template
 
@@ -56,7 +65,9 @@ class Prompt(BaseModel):
 
 class Scenario(BaseModel):
     """
-    Represents a single scenario for running the pipeline: On this document, with this model, and this prompt.
+    Represents a single scenario for running the pipeline:
+
+    On this document, with this model, and this prompt.
     """
 
     id: str = str(uuid.uuid4())
@@ -143,6 +154,8 @@ class Query(BaseModel):
 
 
 class DBQuery(Model):
+    """A database model for a query to the RAG pipeline"""
+
     id = AutoField()
     text = TextField()
     query_type = CharField(null=True)
@@ -158,6 +171,7 @@ class DBQuery(Model):
 
     @classmethod
     def from_query(cls, query: Query):
+        """Converts a Query object to a DBQuery object."""
         return cls(
             document_id=query.document_id,
             model=query.model,
@@ -172,25 +186,29 @@ class DBQuery(Model):
         )
 
     def to_query(self) -> Query:
+        """Converts a DBQuery object to a Query object."""
         return Query(
-            text=self.text,
-            type=QueryType(self.query_type.lower().replace("querytype.", "")),
-            document_id=self.document_id,
-            prompt_template=self.prompt,
-            timestamp=self.created_at,
-            user=self.user,
-            model=self.model,
+            text=str(self.text),
+            type=QueryType(str(self.query_type).lower().replace("querytype.", "")),
+            document_id=str(self.document_id),
+            prompt_template=str(self.prompt),
+            timestamp=self.created_at,  # pyright: ignore
+            user=str(self.user),
+            model=str(self.model),
             uuid=str(self.uuid),
-            tag=self.tag,
-            db_id=self.id,
+            tag=str(self.tag),
+            db_id=int(self.id),  # pyright: ignore
         )
 
     class Meta:
+        """Set DB for the model"""
+
         database = db
 
 
 class QAPair(Model):
     """Represents a Question-Answer pair in the database."""
+
     id = AutoField()
     document_id = CharField(null=True)
     model = CharField(null=True)
@@ -208,6 +226,8 @@ class QAPair(Model):
     generation = BinaryJSONField(null=True)  # serialized EndToEndGeneration
 
     class Meta:
+        """Set DB for the model"""
+
         database = db
 
     def to_end_to_end_generation(self) -> "EndToEndGeneration":
@@ -234,8 +254,8 @@ class RAGRequest(BaseModel):
     top_k: int = 10
     generation_engine: LLMTypes = LLMTypes.OPENAI
     mock_generation: bool = False
-    user: Optional[str] = None
-    model: Optional[str] = None
+    user: Optional[str] = ""
+    model: Optional[str] = ""
     prompt_template: str = "FAITHFULQA_SCHIMANSKI_CITATION_QA_TEMPLATE_MODIFIED"
     retrieval_window: int = 1
     config: Optional[str] = "src/configs/answer_config.yaml"
@@ -243,8 +263,8 @@ class RAGRequest(BaseModel):
     def as_scenario(self, dc: DocumentController) -> Scenario:
         """Returns the RAGRequest as a Scenario object."""
         return Scenario(
-            model=self.model,
-            generation_engine=self.generation_engine,
+            model=self.model if self.model else "",
+            generation_engine=str(self.generation_engine),
             prompt=Prompt.from_template(prompt_template=self.prompt_template),
             document=dc.create_base_document(document_id=self.document_id),
             retrieval_window=self.retrieval_window,
@@ -257,10 +277,12 @@ class RAGRequest(BaseModel):
         return cls(
             query=query,
             model=scenario.model,
-            generation_engine=scenario.generation_engine,
+            generation_engine=LLMTypes(scenario.generation_engine),
             prompt_template=scenario.prompt.prompt_template,
-            document_id=scenario.document.document_id,
-            retrieval_window=scenario.retrieval_window,
+            document_id=scenario.document.document_id if scenario.document else "",
+            retrieval_window=scenario.retrieval_window
+            if scenario.retrieval_window
+            else 1,
             top_k=scenario.top_k_retrieval_results or 5,
         )
 
@@ -376,8 +398,12 @@ class EndToEndGeneration(BaseModel):
 
     def get_answer(self, remove_cot: bool = True) -> str:
         """Returns the answer from the RAG response. If remove_cot is True, the inner monologue is removed before returning, otherwise the full response is returned."""
+        if self.rag_response is None:
+            return ""
+
         if remove_cot:
             return self.rag_response.extract_inner_monologue()["answer"]
+
         return self.rag_response.text
 
     @model_validator(mode="before")
@@ -402,7 +428,7 @@ class EndToEndGeneration(BaseModel):
             pipeline_id=tag,
             question=self.rag_request.query,
             query_id=query_id,
-            answer=self.rag_response.text,
+            answer=self.get_answer(False),
             evals={},
             metadata={},
             generation=json.dumps(self.model_dump()),
@@ -418,9 +444,8 @@ class RAGLog(BaseModel):
     document_id: str
     top_k: int
     retrieved_documents: list[dict]
-    windows: list[list[dict]]
-    start_time: datetime
-    end_time: datetime
+    start_time: datetime.datetime
+    end_time: datetime.datetime
     generation: Optional[str] = None
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -429,7 +454,7 @@ class RAGLog(BaseModel):
         cls,
         rag_response: RAGResponse,
         rag_request: RAGRequest,
-        start_time: datetime,
+        start_time: datetime.datetime,
     ) -> "RAGLog":
         """Creates the log trace from the request and response."""
         return cls(
@@ -437,7 +462,6 @@ class RAGLog(BaseModel):
             query=rag_request.query,
             document_id=rag_request.document_id,
             top_k=rag_request.top_k,
-            windows=rag_response.windows,
             retrieved_documents=rag_response.retrieved_documents,
             start_time=start_time,
             end_time=datetime.datetime.now(),
