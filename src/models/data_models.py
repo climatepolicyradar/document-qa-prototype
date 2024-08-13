@@ -31,6 +31,7 @@ db = get_db()
 
 
 class Prompt(BaseModel):
+    """Represents a prompt template for generating responses."""
     prompt_template: str
     prompt_content: jinja2.Template
 
