@@ -93,14 +93,18 @@ class GuardrailController:
 
         return result.validation_passed
 
-    def validate_text(self, text: str) -> dict[GuardrailType, bool]:
+    def validate_text(self, text: str) -> tuple[bool, dict[GuardrailType, bool]]:
         """
         Validate text against all guardrails
 
-        Returns dict of GuardrailType -> bool, where the bool is whether the validation
-        passed for that guardrail.
+        :param str text: text to validate
+        :return tuple[bool, dict[GuardrailType, bool]]: overall validation result and individual guardrail results by name
         """
-        return {
+        individual_results = {
             guardrail_type: self._validate_text_individual_guardrail(text, guardrail)
             for guardrail_type, guardrail in self.guardrails.items()
         }
+
+        overall_result = all(individual_results.values())
+
+        return overall_result, individual_results
