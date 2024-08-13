@@ -12,7 +12,11 @@ import json
 
 from prefect_aws import AwsCredentials
 
-aws_credentials_block = AwsCredentials.load("aws-credentials-block-labs")
+try:
+    aws_credentials_block = AwsCredentials.load("aws-credentials-block-labs")
+except Exception:
+    print("No prefect block found, falling back to env")
+    aws_credentials_block = None
 
 
 def log_essentials() -> str:
@@ -27,6 +31,15 @@ def log_essentials() -> str:
     return out_str
 
 
+def _get_default_ssm_client() -> boto3.client:
+    return boto3.client(
+        "ssm",
+        region_name="eu-west-1",
+        aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
+        aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
+    )
+
+
 def get_secret(key: str) -> str:
     """
     Returns a secret -- selecting from env if exists, otherwise query AWS SSM and add to env
@@ -38,17 +51,16 @@ def get_secret(key: str) -> str:
         return os.environ[key]
 
     try:
-        ssm_client = aws_credentials_block.get_boto3_session().client(
-            "ssm", region_name="eu-west-1"
-        )
+        if aws_credentials_block:
+            ssm_client = aws_credentials_block.get_boto3_session().client(
+                "ssm", region_name="eu-west-1"
+            )
+        else:
+            ssm_client = _get_default_ssm_client()
+
     except Exception:
         print("Falling back to default boto3")
-        ssm_client = boto3.client(
-            "ssm",
-            region_name="eu-west-1",
-            aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
-            aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
-        )
+        ssm_client = _get_default_ssm_client()
 
     try:
         secret = ssm_client.get_parameter(Name=f"/RAG/{key}", WithDecryption=True)
