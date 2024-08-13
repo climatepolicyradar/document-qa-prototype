@@ -1,5 +1,3 @@
-import click
-import pandas as pd
 import catalogue
 import importlib
 
@@ -7,11 +5,9 @@ from pathlib import Path
 from typing import Optional
 
 from src.evaluation.evaluator import Evaluator
-from typing import Union
-from tqdm import tqdm
 from catalogue import Registry
 
-from src.evaluation.evaluator import MultiAxisEvaluator, Score
+from src.evaluation.evaluator import MultiAxisEvaluator
 from src.models.data_models import EndToEndGeneration
 from src.logger import get_logger
 
@@ -19,20 +15,22 @@ evaluators = catalogue.create("src.evaluation", entry_points=True)
 
 LOGGER = get_logger(__name__)
 
-class EvaluationController():
-    evaluators: Registry 
+
+class EvaluationController:
+    evaluators: Registry
     instantiated: list[Evaluator]
-    
+
     def __init__(self):
         self.evaluators = evaluators
+        LOGGER.info(f"Evaluators: {self.evaluators.get_all()}")
         self.instantiated = [
-            self.get_evaluator("g_eval_policy"), 
-            self.get_evaluator("g_eval_faithfulness"), 
-            self.get_evaluator("vectara"),
+            self.get_evaluator("g_eval_policy"),
+            self.get_evaluator("g_eval_faithfulness"),
             self.get_evaluator("system_response"),
-            self.get_evaluator("patronus_lynx")
-        ] # The registry doesn't instantiate the evaluators properly, so load them separately
-    
+            self.get_evaluator("patronus_lynx"),
+            self.get_evaluator("vectara"),
+        ]  # The registry doesn't instantiate the evaluators properly, so load them separately
+
     def get_all_evaluators(self):
         return self.instantiated
 
@@ -42,13 +40,17 @@ class EvaluationController():
 
         if evaluator not in self.evaluators:
             for path in Path("src/evaluation").rglob("*.py"):
-                if path.stem == evaluator:
+                if path.stem.strip() == evaluator.strip():
+                    LOGGER.info(f"Found evaluator: {path.stem} {evaluator}")
                     try:
                         _ = importlib.import_module(
                             f".{path.stem}", f"src.evaluation.{path.parent.stem}"
                         )
+                        LOGGER.info("LOADED SUCCESSFULLY?")
+                        LOGGER.info(_)
                         break
-                    except ModuleNotFoundError:
+                    except ModuleNotFoundError as e:
+                        LOGGER.warning(f"Module not found: {path.stem} {evaluator} {e}")
                         continue
 
         if evaluator not in self.evaluators:
@@ -57,11 +59,16 @@ class EvaluationController():
 
         return self.evaluators.get(evaluator)(**kwargs)
 
-    def evaluate(self, result: EndToEndGeneration, evaluator: str, eval_kwargs: Optional[dict] = None):
+    def evaluate(
+        self,
+        result: EndToEndGeneration,
+        evaluator: str,
+        eval_kwargs: Optional[dict] = None,
+    ):
         evaluator = self.get_evaluator(evaluator, eval_kwargs)
         return evaluator.evaluate(result)
-     
+
     def evaluate_all(self, result: EndToEndGeneration):
         eval: MultiAxisEvaluator = MultiAxisEvaluator(self.instantiated)
-        
+
         return eval.evaluate(result)
