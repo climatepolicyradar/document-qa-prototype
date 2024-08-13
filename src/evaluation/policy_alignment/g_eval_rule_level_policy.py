@@ -1,4 +1,4 @@
-from src.online.data_models import EndToEndGeneration
+from src.models.data_models import EndToEndGeneration
 from src.prompts.template_building import jinja_template_loader
 from src.evaluation.util import evaluators
 from src.evaluation.evaluator import Evaluator

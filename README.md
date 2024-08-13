@@ -64,8 +64,12 @@ Some datasets that are related to this codebase are:
 ## TODOs
 - [ ] Update this readme post-refactor 
 - [x] Add defensive checks on vertex integration when merging for project_id and endpoint_id if they're not provided 
-- [ ] AWS Prefect aws-credentials-block-labs is still sandbox parameter store. (for Mark)
 - [ ] Write script to pull out all TODOs from the codebase and add them to this readme
+- [ ] Are the config search params still being used? How and where? 
+
+## API
+### Getting a RAG answer
+
 
 ## Temporary notes
 

@@ -38,7 +38,7 @@ class RagController:
     def __init__(self, observe: bool = True):
         self.vespa = VespaController()
 
-        #self.observability = ObservabilityManager()
+        self.observability = ObservabilityManager()
         self.observe = False
         # TODO self.observe = observe
 
@@ -259,7 +259,6 @@ class RagController:
 
         LOGGER.info(f"📝 Extracted assertions: {assertions}")
         return assertions
-    
 
     def _parse_response_into_queries(
         self, response_text: str, document_id: str, scenario: Scenario, tag: str

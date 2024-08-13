@@ -1,23 +1,48 @@
+import uuid
 from src.evaluation.evaluator import Score
 from src.evaluation.system_response.system_response import SystemResponse
-from tests.evaluation.util import e2e_data
 
 import pytest
 
-assert e2e_data  # ensure that pyright doesn't remove this
+from src.models.data_models import EndToEndGeneration, RAGRequest, RAGResponse
 
 
 @pytest.fixture
-def expected_system_responds_results():
-    return [1, 0, 1, 0.5, 0, 0]
+def mock_e2e_generation():
+    return EndToEndGeneration(
+        config={},
+        uuid=str(uuid.uuid4()),
+        rag_request=RAGRequest(query="This is a test query.", document_id="test_id"),
+        rag_response=RAGResponse(
+            text="This is a test answer.",
+            query="This is a test query.",
+            retrieved_documents=[{"page_content": "This is a test passage."}],
+        ),
+    )
 
 
-def test_system_response_eval(e2e_data, expected_system_responds_results):
+@pytest.fixture
+def mock_e2e_no_response():
+    return EndToEndGeneration(
+        config={},
+        uuid=str(uuid.uuid4()),
+        rag_request=RAGRequest(query="This is a test query.", document_id="test_id"),
+        rag_response=RAGResponse(
+            text="I cannot provide an answer to this question.",
+            query="This is a test query.",
+            retrieved_documents=[{"page_content": "This is a test passage."}],
+        ),
+    )
+
+
+def test_system_response_eval(mock_e2e_generation, mock_e2e_no_response):
     evaluator = SystemResponse()
 
-    for idx, e2e_gen in enumerate(e2e_data):
-        result = evaluator.evaluate(e2e_gen)
-        assert isinstance(result, Score)
-        assert result.type == "system_response"
-        assert result.name == "substring_match"
-        assert result.score == expected_system_responds_results[idx]
+    result = evaluator.evaluate(mock_e2e_generation)
+    assert isinstance(result, Score)
+    assert result.type == "system_response"
+    assert result.name == "substring_match"
+    assert result.score == 1.0
+
+    result = evaluator.evaluate(mock_e2e_no_response)
+    assert result.score == 0.0
