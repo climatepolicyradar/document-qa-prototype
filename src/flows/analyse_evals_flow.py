@@ -1,10 +1,12 @@
 import argparse
 from prefect import flow, get_run_logger
-from src.controllers.EvaluationController import EvaluationController
 
 from peewee import Database
 from src.flows.utils import get_db
 from src.flows.tasks.data_tasks import get_qa_pairs_with_evals
+from src.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 @flow
@@ -14,7 +16,7 @@ def generate_analysis_flow(db: Database, tag: str, limit: int = 5):
 
     qa_pairs = get_qa_pairs_with_evals(db, tag, limit=limit)
 
-
+    logger.info(f"Returned: {len(qa_pairs)}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate analysis for the evaulation set")

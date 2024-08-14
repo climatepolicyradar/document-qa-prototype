@@ -129,7 +129,7 @@ def get_answers_needing_evals(db: Database, tag: str, limit: int = 10) -> list[Q
     return answers
 
 
-def get_qa_pairs_with_evals(db: Database, tag: str) -> list[QAPair]:
+def get_qa_pairs_with_evals(db: Database, tag: str, limit: int) -> list[QAPair]:
     """
     Gets the QA pairs with non-empty eval results for a given tag
     
@@ -141,6 +141,7 @@ def get_qa_pairs_with_evals(db: Database, tag: str) -> list[QAPair]:
         for qa in QAPair.select()
         .where(QAPair.pipeline_id == tag)
         .where(QAPair.evals != {})
+        .limit(limit)
     ]
     logger.info(f"🎲 Got {len(answers)} answers with evals")
     return answers
