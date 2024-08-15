@@ -101,3 +101,11 @@ class EvaluationController:
         eval: MultiAxisEvaluator = MultiAxisEvaluator(self.instantiated)
 
         return eval.evaluate(result)
+
+    def did_system_respond(self, result: EndToEndGeneration):
+        """Check if the system responded to the user query."""
+        sys_eval = self.get_evaluator("system_response")
+        eval_result = sys_eval.evaluate(result)
+        if eval_result.score == 0:
+            return False
+        return True

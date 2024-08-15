@@ -1,37 +1,39 @@
 import argparse
-from prefect import flow, get_run_logger
+from prefect import flow, get_run_logger, task
 from src.controllers.EvaluationController import EvaluationController
 
-from src.flows.utils import get_db
 from src.flows.tasks.data_tasks import get_answers_needing_evals
+from src.models.data_models import QAPair
 
 
 @flow
 def generate_evals_flow(tag: str, limit: int = 5):
     logger = get_run_logger()
-    db = get_db()
 
+    answers = get_answers_needing_evals(tag, limit=limit)
+    logger.info(f"💡 Generating evals for {len(answers)} answers with tag {tag}")
+
+    for answer in answers:
+        evaluate_answer.submit(answer)
+
+
+@task
+def evaluate_answer(answer: QAPair):
+    """Evaluate a single answer from the DB"""
+    logger = get_run_logger()
     ec = EvaluationController()
 
-    answers = get_answers_needing_evals(db, tag, limit=limit)
-    while len(answers) > 0:
-        logger.info(f"💡 Generating evals for {len(answers)} answers with tag {tag}")
+    gen = answer.to_end_to_end_generation()
+    logger.info(f"📋 {gen.rag_request.query}: {gen.get_answer()}")
 
-        for answer in answers:
-            gen = answer.to_end_to_end_generation()
-            logger.info(f"📋 {gen.rag_request.query}: {gen.get_answer()}")
+    result = ec.evaluate_all(gen)
+    logger.info(f"📋 Result: {result}")
 
-            result = ec.evaluate_all(gen)
-            logger.info(f"📋 Result: {result}")
+    for score in result:
+        answer.evals[f"{score.name}-{score.type}"] = score.model_dump_json()
 
-            for score in result:
-                answer.evals[f"{score.name}-{score.type}"] = score.model_dump_json()
-
-            print(answer.evals)
-            answer.save()
-
-        logger.info("🔄 Getting more answers to evaluate")
-        answers = get_answers_needing_evals(db, tag, limit=limit)
+    logger.info(f"📋 Evaluations: {answer.evals}")
+    answer.save()
 
 
 if __name__ == "__main__":

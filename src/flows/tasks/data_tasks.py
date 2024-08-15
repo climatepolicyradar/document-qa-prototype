@@ -116,7 +116,7 @@ def get_answers(db: Database, tag: str) -> list[QAPair]:
     return answers
 
 
-def get_answers_needing_evals(db: Database, tag: str, limit: int = 10) -> list[QAPair]:
+def get_answers_needing_evals(tag: str, limit: int = 10) -> list[QAPair]:
     logger = get_run_logger()
     answers = [
         qa

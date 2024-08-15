@@ -6,7 +6,8 @@ And an assertion extracted from the AI-generated answer to the question "{query_
 {{assertion}}
 [END OF ASSERTION]
 
-Extract the text from sources numbered {{cited_sources}} that most directly supports the assertion. 
+Extract the text from sources numbered {{cited_sources}} that most directly support the assertion. The extracted text should be a substring of the passage from the source. The substring should be a short part of the passage that directly supports the assertion. Output only the substring.
+
 - Output ONLY extracted text EXACTLY as it appears in the source
 - Do not output any other text
 - Do not output any other formatting

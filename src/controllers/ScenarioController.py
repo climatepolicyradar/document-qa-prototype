@@ -77,7 +77,6 @@ class ScenarioController:
     def from_config_dict(cls, config: dict) -> "ScenarioController":  # type: ignore
         """Load a set of scenarios from a config file"""
         cls.config = config
-        LOGGER.info(cls.config)
 
         model_options = cls._create_options(
             cls, cls.config["models"], SelectionStrategy(cls.config["model_selection"])
@@ -108,9 +107,6 @@ class ScenarioController:
                 for model, template in all_options
                 for retrieval in retrieval_options
             ]
-
-        LOGGER.info(f"🤖 Created {len(all_options)} scenarios from config")
-        LOGGER.info(f"🤖 Scenarios: {all_options}")
 
         cls._load_template_map(cls)  # type: ignore
 

@@ -95,6 +95,47 @@ def rag_chain(
     return rag_chain_from_retriever
 
 
+def streamable_rag_chain(
+    citation_template: BasePromptTemplate,
+    llm: BaseLanguageModel,
+    retriever: VectorStoreRetriever,
+    scenario: Scenario,
+) -> RunnableSerializable:
+    """
+    Creates a streamable version of our rag chain (below)
+
+    Because of langchain's langchainy-ness, we don't seem to be able to use the approach in the sync/batch approach that creates a dict of key information. Instead, this will just output the answer as a stream.
+
+    Args:
+        citation_template: The template to format the retrieved documents and query string with
+        llm: The language model to use
+        retriever: The VectorStoreRetriever for retrieval of documents
+        scenario: The scenario to use for the RAG pipeline
+
+    Returns:
+        RunnableParallel: The runnable chain that is to be invoked with a query
+    """
+
+    rag_chain_from_retriever = (
+        RunnableParallel(
+            {
+                "documents": retriever,
+                "query_str": itemgetter("query_str"),
+                "document_id": itemgetter("document_id"),
+                "document_metadata_context_str": itemgetter(
+                    "document_metadata_context_str"
+                ),
+            }
+        )
+        | RunnablePassthrough.assign(context_str=format_docs_into_context_str)
+        | citation_template
+        | llm
+        | StrOutputParser()
+    )
+
+    return rag_chain_from_retriever
+
+
 def format_docs_into_context_str(
     retrieval_output: dict[str, Union[str, list[LangChainDocument]]]
 ) -> str:

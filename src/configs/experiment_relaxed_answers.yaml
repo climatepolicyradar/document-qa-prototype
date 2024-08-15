@@ -1,0 +1,17 @@
+models:
+  - generation_engine: vertexai
+    model: mistral-nemo
+  - generation_engine: gemini
+    model: gemini-1.5-flash
+model_selection: all
+prompt_templates:
+  - prompt_template: no-answers-test/response_qa_relax_henry_1
+  - prompt_template: no-answers-test/response_qa_relax_henry_2
+  - prompt_template: no-answers-test/basic_answer_response_educational
+  - prompt_template: no-answers-test/basic_answer_response_query_analysis
+template_selection: all
+retrieval:
+  - retrieval_window: 1
+    top_k: 6
+retrieval_selection: random
+documents_per_query: 1 # set this to 1 if the query file contains document ids

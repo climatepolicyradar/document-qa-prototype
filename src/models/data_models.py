@@ -235,6 +235,27 @@ class QAPair(Model):
 
         database = db
 
+    @classmethod
+    def get_by_source_id(cls, source_id: str) -> "QAPair":
+        """Returns a QAPair object by source_id."""
+        return cls.select().where(cls.source_id == source_id).first()
+
+    @classmethod
+    def from_end_to_end_generation(cls, generation: "EndToEndGeneration", tag: str):
+        """Converts an EndToEndGeneration object to a QAPair object."""
+        return cls(
+            document_id=generation.rag_request.document_id,
+            model=generation.rag_request.model,
+            prompt=generation.rag_request.prompt_template,
+            pipeline_id=tag,
+            question=generation.rag_request.query,
+            answer=generation.get_answer(False),
+            evals={},
+            metadata={},
+            source_id=generation.uuid,
+            generation=generation.model_dump_json(),
+        )
+
     def to_end_to_end_generation(self) -> "EndToEndGeneration":
         """Converts the QAPair object to an EndToEndGeneration object."""
         gen_dict = json.loads(self.generation)
