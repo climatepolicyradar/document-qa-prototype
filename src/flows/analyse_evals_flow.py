@@ -18,6 +18,7 @@ def generate_analysis_flow(db: Database, tag: str, limit: int = 5):
 
     logger.info(f"Returned: {len(qa_pairs)}")
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate analysis for the evaulation set")
     parser.add_argument("tag", type=str, help="Tag for grouping QA pairs together")
