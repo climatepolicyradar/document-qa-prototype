@@ -76,6 +76,12 @@ if encoded_creds:
     VERTEX_CREDS = json.loads(base64.b64decode(encoded_creds).decode("utf-8"))
 
 VERTEX_MODEL_ENDPOINTS = {
+    "llama3-70b": {
+        "type": "model_garden",
+        "endpoint_id": "7522880547475947520",
+        "location": "europe-west2",
+        "params": {"max_output_tokens": 2048},
+    },
     "llama3-8b-chat": {
         "type": "model_garden",
         "endpoint_id": "8290603546454261760",
@@ -103,6 +109,13 @@ VERTEX_MODEL_ENDPOINTS = {
     "mistral-nemo": {
         "type": "vertex_api",
         "model_name": "mistral-nemo@2407",
+        "publisher": "mistralai",
+        "location": "europe-west4",
+        "params": {"max_output_tokens": 2048},
+    },
+    "mistral-large": {
+        "type": "vertex_api",
+        "model_name": "mistral-large@2407",
         "publisher": "mistralai",
         "location": "europe-west4",
         "params": {"max_output_tokens": 2048},
