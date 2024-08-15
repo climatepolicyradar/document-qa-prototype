@@ -4220,6 +4220,17 @@ dev = ["pre-commit", "tox"]
 testing = ["pytest", "pytest-benchmark"]
 
 [[package]]
+name = "pq"
+version = "1.9.1"
+description = "PQ is a transactional queue for PostgreSQL."
+category = "main"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "pq-1.9.1.tar.gz", hash = "sha256:d64af0efb8a3ebd11b2e0e662a6426c5e1e99f7f2e446f4439ba0699193e4ad6"},
+]
+
+[[package]]
 name = "pre-commit"
 version = "2.21.0"
 description = "A framework for managing and maintaining multi-language pre-commit hooks."
@@ -7593,4 +7604,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.9.7 || >3.9.7,<3.12"
-content-hash = "93c00a83ba90a368e59f8bc733c813ffbdf7859dc61c5828ce923d35653348f2"
+content-hash = "c2a3262bdc514e49e4506d481b308f4478d94114ebfdf0f72c03a80393b3cfdf"

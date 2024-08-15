@@ -49,6 +49,13 @@ def get_queries(db: Database, tag: str = "test") -> list[Query]:
     return queries
 
 
+def get_query_by_id(db: Database, id: int) -> Query:
+    logger = get_run_logger()
+    query = DBQuery.get_or_none(DBQuery.id == id)
+    logger.info(f"🎲 Got query with id {id}")
+    return query.to_query()
+
+
 def get_unanswered_queries(
     db: Database, tag: str, query_tag: str, model: str, prompt: str
 ) -> list[Query]:

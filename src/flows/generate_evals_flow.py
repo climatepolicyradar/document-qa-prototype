@@ -36,6 +36,21 @@ def evaluate_answer(answer: QAPair):
     answer.save()
 
 
+def evaluate_system_response(answer: QAPair):
+    """Evaluate a single answer from the DB"""
+    logger = get_run_logger()
+    ec = EvaluationController()
+
+    gen = answer.to_end_to_end_generation()
+    logger.info(f"📋 {gen.rag_request.query}: {gen.get_answer()}")
+
+    score = ec.evaluate_system_response(gen)
+    logger.info(f"📋 Result: {score}")
+    answer.evals[f"{score.name}-{score.type}"] = score.model_dump_json()
+    answer.save()
+    logger.info(f"📋 Evaluations: {answer.evals}")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate evals for answers")
     parser.add_argument("tag", type=str, help="Tag for grouping QA pairs together")

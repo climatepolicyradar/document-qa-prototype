@@ -10,7 +10,7 @@ from src.controllers.RagController import RagController
 from src.controllers.ScenarioController import ScenarioController
 from cpr_data_access.models import BaseDocument
 from src.logger import get_logger
-from src.models.data_models import EndToEndGeneration, Prompt, RAGRequest, Scenario
+from src.models.data_models import Prompt, RAGRequest, Scenario
 from src.online.inference import LLMTypes
 from src import config
 from src.models.data_models import QAPair
@@ -220,10 +220,11 @@ async def get_highlights(source_id: str):
     return highlights
 
 
-@app.post("/evaluate")
-def evaluate(request: EndToEndGeneration):
+@app.post("/evaluate/{source_id}")
+def evaluate(source_id: str):
     """Evaluate an answer."""
+    qa_pair = QAPair.get_by_source_id(source_id)
+    gen_model = qa_pair.to_end_to_end_generation()
 
-    # scenario = ScenarioController.from_config("answer_config.yaml").scenarios[0]
-    evals = ec.evaluate_all(request)
+    evals = ec.evaluate_async(gen_model)
     return evals

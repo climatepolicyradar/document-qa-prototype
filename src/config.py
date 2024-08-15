@@ -39,8 +39,8 @@ if not VESPA_CERT or VESPA_CERT == "" or not VESPA_KEY or VESPA_KEY == "":
         key_file.write(key_content)
 
     # Assume running in docker container, which is /app workdir
-    VESPA_CERT = f"/app/{cert_path}"
-    VESPA_KEY = f"/app/{key_path}"
+    VESPA_CERT = f"/opt/prefect/{cert_path}"
+    VESPA_KEY = f"/opt/prefect/{key_path}"
 
     logger.info(f"VESPA_CERT: {VESPA_CERT}, VESPA_KEY: {VESPA_KEY}")
 

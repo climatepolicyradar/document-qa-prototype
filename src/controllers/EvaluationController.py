@@ -88,6 +88,10 @@ class EvaluationController:
         eval_inst = self.get_evaluator(evaluator, eval_kwargs)
         return eval_inst.evaluate(result)
 
+    def evaluate_system_response(self, result: EndToEndGeneration):
+        """Evaluate the system response."""
+        return self.evaluate(result, "system_response")
+
     def evaluate_all(self, result: EndToEndGeneration):
         """
         Evaluate the given result using all instantiated evaluators.
@@ -101,6 +105,11 @@ class EvaluationController:
         eval: MultiAxisEvaluator = MultiAxisEvaluator(self.instantiated)
 
         return eval.evaluate(result)
+
+    def evaluate_async(self, result: EndToEndGeneration):
+        """Evaluate the given result using all instantiated evaluators in parallel."""
+
+        return self.evaluate_all(result)
 
     def did_system_respond(self, result: EndToEndGeneration):
         """Check if the system responded to the user query."""
