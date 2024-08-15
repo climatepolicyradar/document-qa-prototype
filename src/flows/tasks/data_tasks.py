@@ -50,12 +50,7 @@ def get_queries(db: Database, tag: str = "test") -> list[Query]:
 
 
 def get_unanswered_queries(
-    db: Database,
-    tag: str,
-    query_tag: str,
-    model: str,
-    prompt: str,
-    querstion_prompts: list[str],
+    db: Database, tag: str, query_tag: str, model: str, prompt: str
 ) -> list[Query]:
     logger = get_run_logger()
     logger.info(
@@ -76,9 +71,7 @@ def get_unanswered_queries(
     queries = [
         query.to_query()
         for query in DBQuery.select().where(
-            DBQuery.tag == query_tag,
-            DBQuery.id.not_in(curr_answer_ids),
-            DBQuery.prompt.in_(querstion_prompts),
+            DBQuery.tag == query_tag, DBQuery.id.not_in(curr_answer_ids)
         )
     ]
 
@@ -95,11 +88,15 @@ def get_unanswered_queries(
     timeout_seconds=600,
     tags=["calls_db"],
 )
-def save_answer(tag: str, answer: EndToEndGeneration, db: Database, query: Query):
+def save_answer(
+    tag: str, answer: EndToEndGeneration, db: Database, query: Query
+) -> QAPair:
     logger = get_run_logger()
     logger.info("Saving answer to database...")
     assert query.db_id is not None, "Query database ID is not set!"
-    answer.to_db_model(tag, query_id=str(query.db_id)).save()
+    result = answer.to_db_model(tag, query_id=str(query.db_id))
+    result.save()
+    return result
 
 
 @task(

@@ -10,36 +10,17 @@ from peewee import Database
 from src.flows.utils import get_db
 from src.models.data_models import Query, Scenario
 from src.flows.tasks.data_tasks import get_queries, save_answer, get_unanswered_queries
+from src.flows.generate_evals_flow import evaluate_answer
 
 
-@task
-def spawn_answer_tasks(
-    scenario: Scenario, db: Database, tag: str, query_tag: str, only_new: bool
-):
+@flow
+def spawn_answer_tasks(scenario: Scenario, tag: str, query_tag: str, only_new: bool):
+    db = get_db()
     logger = get_run_logger()
 
     if only_new:
-        # Filter only to the queries in the current set. This is a very poor way to structure this. Just wanna get it done for now. Refactor later.
-        query_prompts = [
-            "evals-0.0.1/queries-bias",
-            "evals-0.0.1/queries-ambiguous",
-            "evals-0.0.1/queries-jailbreak",
-            "evals-0.0.1/queries-typo",
-            "evals-0.0.1/queries-normal",
-            "evals-0.0.1/queries-nonsense",
-            "evals-0.0.1/queries-factual-errors",
-            "evals-0.0.1/queries-opinions",
-            "evals-0.0.1/queries-harmful",
-            "evals-0.0.1/queries-ambiguous",
-        ]
-
         queries = get_unanswered_queries(
-            db,
-            tag,
-            query_tag,
-            scenario.model,
-            scenario.prompt.prompt_template,
-            query_prompts,
+            db, tag, query_tag, scenario.model, scenario.prompt.prompt_template
         )
     else:
         queries = get_queries(db, query_tag)
@@ -49,8 +30,8 @@ def spawn_answer_tasks(
     )
     for i, query in enumerate(queries):
         generate_answer_full.submit(query, scenario, db, tag, query_tag)
-        logger.info(f"🕐 Sleeping for 5 seconds before processing query: {query}")
-        time.sleep(5)
+        logger.info(f"🕐 Sleeping before processing query: {query}")
+        time.sleep(1)
 
 
 @task
@@ -61,7 +42,6 @@ def generate_answer_full(
     rc = RagController()
 
     logger = get_run_logger()
-    logger.info(f"📋 DB: {db}")
 
     assert query.document_id is not None, "Document ID is None"
     scenario.document = dc.create_base_document(str(query.document_id))
@@ -71,7 +51,9 @@ def generate_answer_full(
     result = generate_answer_task(query, scenario, tag, rc)
 
     # Save to database
-    save_answer(tag, result, db, query)
+    qa_pair = save_answer(tag, result, db, query)
+
+    evaluate_answer(qa_pair)
 
 
 @flow
@@ -87,10 +69,9 @@ def answer_control_flow(
     If only_new is True, it will only generate answers for new queries that don't have answers yet for the given model/prompt/tag combination.
     """
     sc = ScenarioController.from_config(config)
-    db = get_db()
 
     for scenario in sc.scenarios:
-        spawn_answer_tasks.submit(scenario, db, tag, query_tag, only_new).wait()
+        spawn_answer_tasks(scenario, tag, query_tag, only_new)
 
 
 if __name__ == "__main__":

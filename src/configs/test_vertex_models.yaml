@@ -1,8 +1,6 @@
 models:
   - generation_engine: vertexai
-    model: mistral-nemo
-  - generation_engine: vertexai
-    model: llama3-8b-chat
+    model: mistral-large
 model_selection: all
 prompt_templates:
   - prompt_template: response/test_response
