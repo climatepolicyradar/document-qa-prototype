@@ -1,5 +1,5 @@
 import sys
-from src.flows.generate_answers_flow import answer_control_flow
+from src.flows.generate_answers_flow import queue_answer_flow, run_answers_from_queue
 import dotenv
 import os
 from prefect.blocks.system import JSON
@@ -12,7 +12,8 @@ DEFAULT_JOB_VARIABLES["cpu"] = 1024
 DEFAULT_JOB_VARIABLES["memory"] = 4096
 DOCKER_REGISTRY = os.getenv("DOCKER_REGISTRY")
 
-all_flows = [answer_control_flow]
+# Add flows here to deploy
+all_flows = [queue_answer_flow, run_answers_from_queue]
 
 base_image = DeploymentImage(
     name=f"{DOCKER_REGISTRY}/prefect-rag-labs",

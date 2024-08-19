@@ -46,7 +46,7 @@ def queue_answer_tasks(scenario: Scenario, tag: str, query_tag: str, only_new: b
 
 
 @flow
-def run_answers_from_queue(tag: str, limit: int = 30):
+def run_answers_from_queue(tag: str = "prompt-answer-experiment", limit: int = 5):
     db = get_db()
     logger = get_run_logger()
     dc = DocumentController()
@@ -107,13 +107,14 @@ def queue_answer_flow(
     """
     sc = ScenarioController.from_config(config)
 
-    for scenario in sc.scenarios[:1]:
+    for scenario in sc.scenarios:
         queue_answer_tasks(scenario, tag, query_tag, only_new)
 
 
-def main(tag: str):
-    queue_answer_flow(args.config, args.tag, args.query_tag, args.only_new)
+def main(tag: str, config: str, query_tag: str, only_new: bool):
+    # run_answers_from_queue(tag, limit=2)
     # spawn_answer_tasks(tag, limit=2)
+    queue_answer_flow(config, tag, query_tag, only_new)
 
 
 if __name__ == "__main__":
@@ -132,7 +133,10 @@ if __name__ == "__main__":
         help="Only generate answers for new queries",
     )
     parser.add_argument(
-        "--query_tag", type=str, help="Tag for selecting grouped queries to answer"
+        "--query_tag",
+        type=str,
+        help="Tag for selecting grouped queries to answer",
+        default="",
     )
     args = parser.parse_args()
-    main(args.tag)
+    main(args.tag, args.config, args.query_tag, args.only_new)

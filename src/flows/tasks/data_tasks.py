@@ -63,22 +63,20 @@ def get_unanswered_queries(
     logger.info(
         f"Getting unanswered queries for tag {tag} with model {model} and prompt {prompt}"
     )
-    curr_answer_ids = [
-        qa.query_id
-        for qa in QAPair.select()
+    query_models = (
+        QAPair.select(QAPair.query_id)
         .where(QAPair.pipeline_id == tag)
         .where(QAPair.model == model)
         .where(QAPair.prompt == prompt)
-    ]
-
-    logger.info(
-        f"🎲 Got {len(curr_answer_ids)} answers for tag {tag} with model {model} and prompt {prompt}"
+        .distinct()
     )
+
+    logger.info(f"🎲 {query_models} ")
 
     queries = [
         query.to_query()
         for query in DBQuery.select().where(
-            DBQuery.tag == query_tag, DBQuery.id.not_in(curr_answer_ids)
+            DBQuery.tag == query_tag, DBQuery.id.not_in(query_models)
         )
     ]
 

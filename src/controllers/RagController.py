@@ -175,7 +175,9 @@ class RagController:
 
         rag_chain_with_source = rag_chain(
             llm=llm,
-            retriever=self.vespa.retriever(scenario.document.document_id),  # type: ignore
+            retriever=self.vespa.retriever(
+                scenario.document.document_id, scenario.top_k_retrieval_results or 6
+            ),  # type: ignore
             citation_template=scenario.prompt.make_qa_prompt(),
             scenario=scenario,
         )
@@ -230,7 +232,9 @@ class RagController:
 
         rag_chain_with_source = streamable_rag_chain(
             llm=llm,
-            retriever=self.vespa.retriever(scenario.document.document_id),  # type: ignore
+            retriever=self.vespa.retriever(
+                scenario.document.document_id, scenario.top_k_retrieval_results or 6
+            ),  # type: ignore
             citation_template=scenario.prompt.make_qa_prompt(),
             scenario=scenario,
         )

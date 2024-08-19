@@ -1,3 +1,4 @@
+import asyncio
 import catalogue
 import importlib
 
@@ -53,7 +54,7 @@ class EvaluationController:
 
         if evaluator not in self.evaluators:
             for path in Path("src/evaluation").rglob("*.py"):
-                if path.stem.strip() == evaluator.strip():
+                if path.stem.strip() == evaluator:
                     try:
                         _ = importlib.import_module(
                             f".{path.stem}", f"src.evaluation.{path.parent.stem}"
@@ -106,10 +107,12 @@ class EvaluationController:
 
         return eval.evaluate(result)
 
-    def evaluate_async(self, result: EndToEndGeneration):
+    async def evaluate_async(self, result: EndToEndGeneration):
         """Evaluate the given result using all instantiated evaluators in parallel."""
-
-        return self.evaluate_all(result)
+        result = await asyncio.gather(
+            *[self.evaluate(result, evaluator.name) for evaluator in self.instantiated]  # type: ignore
+        )
+        return result
 
     def did_system_respond(self, result: EndToEndGeneration):
         """Check if the system responded to the user query."""

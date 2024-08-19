@@ -221,10 +221,10 @@ async def get_highlights(source_id: str):
 
 
 @app.post("/evaluate/{source_id}")
-def evaluate(source_id: str):
+async def evaluate(source_id: str):
     """Evaluate an answer."""
     qa_pair = QAPair.get_by_source_id(source_id)
     gen_model = qa_pair.to_end_to_end_generation()
 
-    evals = ec.evaluate_async(gen_model)
+    evals = await ec.evaluate_async(gen_model)
     return evals
