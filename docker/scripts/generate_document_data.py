@@ -1,0 +1,1 @@
+"""Generates metadata JSON for the set of documents. Assumes that the CCLW metadata CSV is in the data folder. Queries Vespa for the set of document IDs that we have RAG data for and then queries the CCLW metadata for the set of documents that we have RAG data for. Outputs the metadata to a JSON file in the data folder."""
