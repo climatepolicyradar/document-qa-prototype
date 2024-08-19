@@ -18,31 +18,53 @@ from src.flows.queue import queue_job, get_queue
 
 
 @task
-def queue_answer_tasks(scenario: Scenario, tag: str, query_tag: str, only_new: bool):
+def queue_answer_tasks(
+    scenarios: list[Scenario], tag: str, query_tag: str, only_new: bool
+):
     db = get_db()
     logger = get_run_logger()
-    if only_new:
-        queries = get_unanswered_queries(
-            db, tag, query_tag, scenario.model, scenario.prompt.prompt_template
-        )
-    else:
-        queries = get_queries(db, query_tag)
 
-    for i, query in enumerate(queries):
-        logger.info(f"📋 Queueing job {i} of {len(queries)}")
-        queue_job(
-            tag,
-            {
-                "query_id": query.db_id,
-                "model": scenario.model,
-                "prompt": scenario.prompt.prompt_template,
-                "generation_engine": scenario.generation_engine,
-                "document_id": query.document_id,
-                "src_config": scenario.src_config,
-                "tag": tag,
-                "query_tag": query_tag,
-            },
-        )
+    continue_queueing = True
+    done_scenarios = {}
+
+    # We do it this way to invert scenario order so that we can queue across model,prompt combinations and process them in parallel rather than processing all queries for a given model/prompt combination sequentially
+    while continue_queueing:
+        for scenario in scenarios:
+            scenario_key = f"{scenario.model}-{scenario.prompt.prompt_template}"
+            if scenario_key in done_scenarios:
+                continue
+
+            if only_new:
+                queries = get_unanswered_queries(
+                    db, tag, query_tag, scenario.model, scenario.prompt.prompt_template
+                )
+            else:
+                queries = get_queries(db, query_tag)
+
+            limit = min(len(queries), 10)
+
+            if limit < 10:
+                logger.info(f"📋 No more queries to queue for scenario {scenario}")
+                done_scenarios[scenario_key] = True
+
+            if len(done_scenarios) == len(scenarios):
+                continue_queueing = False
+
+            for i, query in enumerate(queries[:limit]):
+                logger.info(f"📋 Queueing job {i} of {limit} ({len(queries)} total)")
+                queue_job(
+                    tag,
+                    {
+                        "query_id": query.db_id,
+                        "model": scenario.model,
+                        "prompt": scenario.prompt.prompt_template,
+                        "generation_engine": scenario.generation_engine,
+                        "document_id": query.document_id,
+                        "src_config": scenario.src_config,
+                        "tag": tag,
+                        "query_tag": query_tag,
+                    },
+                )
 
 
 @flow
@@ -107,8 +129,7 @@ def queue_answer_flow(
     """
     sc = ScenarioController.from_config(config)
 
-    for scenario in sc.scenarios:
-        queue_answer_tasks(scenario, tag, query_tag, only_new)
+    queue_answer_tasks(sc.scenarios, tag, query_tag, only_new)
 
 
 def main(tag: str, config: str, query_tag: str, only_new: bool):

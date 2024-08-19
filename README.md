@@ -28,6 +28,10 @@ $ aws sso login --profile <profile-name>
 $ export AWS_PROFILE=<profile-name>; uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
+You can also run the API container using the `make run_api` command after running `make build_api`. `make deploy_api` deploys the container to the ECR repository, which you will need to be logged into. 
+
+When deploying, the script will run `poetry run python -m src.scripts.generate_document_data` to generate the metadata for the documents. This requires the CCLW CSV file to be in the `data/` folder as `docs_metadata.csv`. 
+
 ### API endpoints
 
 #### Highlights 

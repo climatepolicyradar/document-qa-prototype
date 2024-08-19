@@ -1,4 +1,6 @@
 import asyncio
+import json
+from anyio import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
@@ -127,7 +129,7 @@ def do_rag(request: RAGRequest) -> dict:
 
 
 @app.get("/document/{document_id}")
-def get_document(document_id: str) -> BaseDocument:
+def get_document_data(document_id: str) -> BaseDocument:
     """
     Get a document by ID.
 
@@ -137,24 +139,22 @@ def get_document(document_id: str) -> BaseDocument:
     return dc.create_base_document(document_id)
 
 
-@app.get("/document_ids")
-def get_document_ids():
-    """
-    Get unique document IDs from the vector store.
+@app.get("/documents")
+def get_documents():
+    """Returns documents and their metadata available for the tool"""
+    metadata_path = Path("data/document_metadata.json")
+    with open(metadata_path, "r") as f:
+        metadata = json.load(f)
+    return metadata
 
-    This function retrieves and returns a list of all unique document IDs
-    available in the vector store for RAG processing.
 
-    :return list: list of document IDs
-    """
-
-    ## TODO I feel maybe this array mangling should be in get_available_documents but need to look at the JSON deeper to see if there's other information we may want to not lose
-    return {
-        "document_ids": [
-            leaf.document_id
-            for leaf in app_context["rag_controller"].get_available_documents()
-        ]
-    }
+@app.get("/documents/{document_id}")
+def get_document(document_id: str):
+    """Returns a document and its metadata available for the tool"""
+    metadata_path = Path("data/document_metadata.json")
+    with open(metadata_path, "r") as f:
+        metadata = json.load(f)
+    return [d for d in metadata if d["id"] == document_id][0]
 
 
 @app.websocket("/ws/stream_rag/")

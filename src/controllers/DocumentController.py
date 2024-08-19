@@ -20,6 +20,12 @@ class DocumentController:
 
         self.metadata_df = load_metadata()
 
+    def get_metadata(self, document_id: str) -> dict:
+        """Get metadata for a document."""
+        return self.metadata_df[
+            self.metadata_df["Internal Document ID"] == document_id
+        ].to_dict("records")[0]
+
     def create_base_document(self, document_id: str) -> BaseDocument:
         """
         Flesh out a document with the necessary information.

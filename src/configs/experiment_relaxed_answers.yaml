@@ -1,10 +1,19 @@
 models:
   - generation_engine: vertexai
     model: llama3-1-70b-instruct
+  - generation_engine: vertexai
+    model: climate-gpt-7b
+  - generation_engine: gemini
+    model: gemini-1.5-flash
+  - generation_engine: gemini
+    model: gemini-1.5-pro
+  - generation_engine: vertexai
+    model: llama3-1-8b-instruct
+  - generation_engine: vertexai
+    model: llama3-70b
 model_selection: all
 prompt_templates:
-  - prompt_template: no-answers-test/response_qa_relax_henry_1
-  - prompt_template: no-answers-test/response_qa_relax_henry_2
+  - prompt_template: evals-answers-0.0.1/basic_answer
   - prompt_template: no-answers-test/basic_answer_response_educational
   - prompt_template: no-answers-test/basic_answer_response_query_analysis
 template_selection: all
