@@ -1,14 +1,6 @@
 models:
   - generation_engine: vertexai
-    model: mistral-large
-  - generation_engine: vertexai
-    model: llama3-70b
-  - generation_engine: gemini
-    model: gemini-1.5-pro
-  - generation_engine: vertexai
-    model: climate-gpt-7b
-  - generation_engine: vertexai
-    model: llama3-1-8b-instruct
+    model: llama3-1-70b-instruct
 model_selection: all
 prompt_templates:
   - prompt_template: no-answers-test/response_qa_relax_henry_1

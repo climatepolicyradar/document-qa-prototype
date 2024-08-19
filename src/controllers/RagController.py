@@ -197,6 +197,13 @@ class RagController:
         duration = end_time - start_time
         LOGGER.info(f"Duration: {duration}")
 
+        metadata = {}
+        try:
+            metadata["assertions"] = self.extract_assertions_from_answer(response_text)
+        except Exception as e:
+            LOGGER.error(f"Error extracting assertions: {e}")
+            metadata["assertions"] = ["Could not extract assertions"]
+
         response = EndToEndGeneration(
             config=scenario.get_config(),
             rag_request=RAGRequest.from_scenario(query, scenario),
@@ -204,6 +211,7 @@ class RagController:
                 text=response_text,
                 retrieved_documents=[d.dict() for d in response["documents"]],
                 query=query,
+                metadata=metadata,
             ),
         )
 
