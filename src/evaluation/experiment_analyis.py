@@ -4,6 +4,36 @@ import pandas as pd
 from typing import Callable, Optional, Union
 
 
+def pivot_table_by_eval(
+        df: pd.DataFrame,
+        evals: pd.DataFrame,
+        eval_axis: str,
+        index_attribute: str,
+        column_attribute: str,
+        aggregation_func: Optional[Callable] = None,
+) -> pd.DataFrame:
+    """
+    Creates a pivot table of the dataframe with the values of the evals aggregated.
+
+    Args:
+    - df: the qa-pairs dataframe
+    - evals: the evals dataframe
+    - eval_axis: the axis of evaluation to use for the aggregation
+    - index_attribute: the attribute to use as the index (e.g. model)
+    - column_attribute: the attribute to use as the columns (e.g. query-prompt)
+    - aggregation_func: an optional aggregation function to apply to the evals values (in case of faithfulness for example, where threshold is to be applied)
+
+    Returns:
+    - pivot table with the aggregated
+    """
+    df["_tmp"] = df["id"].map(evals[eval_axis].to_dict())
+
+    if aggregation_func is not None:
+        df["_tmp"] = df["_tmp"].apply(aggregation_func)
+
+    return df.pivot_table(index=index_attribute, columns=column_attribute, values="_tmp", aggfunc="mean")
+
+
 def aggregate_and_print_results(
         df: pd.DataFrame,
         evals: pd.DataFrame,
