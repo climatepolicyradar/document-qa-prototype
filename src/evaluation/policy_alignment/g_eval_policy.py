@@ -9,6 +9,7 @@ import src.config as config
 
 LOGGER = get_logger(__name__)
 
+
 @evaluators.register("g_eval_policy")
 class GEvalPolicy(GEval):
     """G-Eval for policy aligment"""

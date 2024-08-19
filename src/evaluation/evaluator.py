@@ -3,6 +3,8 @@ from pydantic import BaseModel, confloat
 from typing import Optional
 from abc import ABC, abstractmethod
 from src.logger import get_logger
+
+
 class Score(BaseModel):
     """Score model"""
 
@@ -46,7 +48,9 @@ class MultiAxisEvaluator(Evaluator):
             try:
                 score = evaluator.evaluate(generation)
             except Exception as e:
-                logger.error(f"Error evaluating {generation.uuid} with {evaluator.NAME}: {e}")
+                logger.error(
+                    f"Error evaluating {generation.uuid} with {evaluator.NAME}: {e}"
+                )
                 continue
             if isinstance(score, list):
                 scores.extend(score)

@@ -132,7 +132,7 @@ def get_answers_needing_evals(db: Database, tag: str, limit: int = 10) -> list[Q
 def get_qa_pairs_with_evals(db: Database, tag: str, limit: int) -> list[QAPair]:
     """
     Gets the QA pairs with non-empty eval results for a given tag
-    
+
     TODO: Performs a join with the Query table to get the query prompt type
     """
     logger = get_run_logger()
