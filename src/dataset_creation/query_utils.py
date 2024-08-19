@@ -1,14 +1,11 @@
-import jinja2
 import json
 
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from typing import Optional
 from datetime import datetime
-from langchain_core.messages.base import BaseMessage
 from cpr_data_access.models import BaseDocument
 
 from src.models.data_models import Query, QueryType
-from src.online.inference import get_llm
 from src.logger import get_logger
 from src.config import VERTEX_MODEL_ENDPOINTS
 
@@ -24,23 +21,29 @@ class PromptTemplateArguments:
     document: str
     rule: Optional[str]
 
+
 def render_document_text_for_llm(document_text: str, model: str) -> str:
-    """Truncates the document text based on the model's token limit.
-    
-    Uses fast approximation from https://stackoverflow.com/questions/76216113/how-can-i-count-tokens-before-making-api-call so can remove tiktoken => all the torch dependencies from docker image for size optimisation.  
     """
-    _encoded_doc_length = len(document_text) * (1/2.718281828) + 2
-    
+    Truncates the document text based on the model's token limit.
+
+    Uses fast approximation from https://stackoverflow.com/questions/76216113/how-can-i-count-tokens-before-making-api-call so can remove tiktoken => all the torch dependencies from docker image for size optimisation.
+    """
+    _encoded_doc_length = len(document_text) * (1 / 2.718281828) + 2
+
     if model in VERTEX_MODEL_ENDPOINTS:
         truncation_amnt = 1500
-        max_tokens = VERTEX_MODEL_ENDPOINTS[model]["params"]["max_tokens"] if "max_tokens" in VERTEX_MODEL_ENDPOINTS[model]["params"] else VERTEX_MODEL_ENDPOINTS[model]["params"]["max_output_tokens"]
-        
+        max_tokens = (
+            VERTEX_MODEL_ENDPOINTS[model]["params"]["max_tokens"]
+            if "max_tokens" in VERTEX_MODEL_ENDPOINTS[model]["params"]
+            else VERTEX_MODEL_ENDPOINTS[model]["params"]["max_output_tokens"]
+        )
+
         if _encoded_doc_length > max_tokens:
-            truncate_to = max_tokens-truncation_amnt
+            truncate_to = max_tokens - truncation_amnt
             LOGGER.warning(
                 f"Document too long [{_encoded_doc_length}], truncating to {truncate_to} tokens."
             )
-            return document_text[:int(truncate_to)]
+            return document_text[: int(truncate_to)]
         return document_text
 
     if _encoded_doc_length > 30000 and "gemini" not in model:
@@ -49,9 +52,9 @@ def render_document_text_for_llm(document_text: str, model: str) -> str:
         )
 
         if "16k" in model:
-            return document_text[:int(14500 * 2.718281828)]
+            return document_text[: int(14500 * 2.718281828)]
         else:
-            return document_text[:int(30000 * 2.718281828)]
+            return document_text[: int(30000 * 2.718281828)]
 
     return document_text
 

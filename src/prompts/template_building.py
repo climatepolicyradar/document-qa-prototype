@@ -4,18 +4,24 @@ import jinja2
 from pathlib import Path
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 
-from src.config import response_templates_folder, policy_templates_folder, root_templates_folder
+from src.config import (
+    response_templates_folder,
+    policy_templates_folder,
+    root_templates_folder,
+)
 
 _cpr_generation_policy = (
     policy_templates_folder / "cpr_generation_policy_shortened.txt"
 ).read_text()
 system_prompt: str = Path(response_templates_folder / "system_prompt.txt").read_text()
 
+
 def jinja_template_loader(path: Union[str, Path]) -> jinja2.Template:
     """Loads jinja template from file."""
     with open(path, "r") as f:
         template = jinja2.Template(f.read())
     return template
+
 
 def get_citation_template(template_name: str) -> PromptTemplate:
     template = (root_templates_folder / f"{template_name}.txt").read_text()
