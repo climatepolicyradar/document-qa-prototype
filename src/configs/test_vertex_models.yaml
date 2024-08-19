@@ -1,6 +1,6 @@
 models:
   - generation_engine: vertexai
-    model: mistral-large
+    model: llama3-1-70b-instruct
 model_selection: all
 prompt_templates:
   - prompt_template: response/test_response

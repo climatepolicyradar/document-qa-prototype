@@ -82,6 +82,12 @@ VERTEX_MODEL_ENDPOINTS = {
         "location": "europe-west2",
         "params": {"max_output_tokens": 2048},
     },
+    "llama3-1-70b-instruct": {
+        "type": "model_garden",
+        "endpoint_id": "2546121484254838784",
+        "location": "europe-west2",
+        "params": {"max_output_tokens": 2048},
+    },
     "llama3-8b-chat": {
         "type": "model_garden",
         "endpoint_id": "8290603546454261760",
