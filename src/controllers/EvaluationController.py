@@ -1,6 +1,7 @@
 import asyncio
 import catalogue
 import importlib
+import json
 
 from pathlib import Path
 from typing import Optional
@@ -108,10 +109,26 @@ class EvaluationController:
         return eval.evaluate(result)
 
     async def evaluate_async(self, result: EndToEndGeneration):
-        """Evaluate the given result using all instantiated evaluators in parallel."""
+        """Evaluate the given result using all instantiated evaluators in parallel. Coupled to API usage. Needs a good refactor really."""
+
+        async def process_eval_async(result: EndToEndGeneration, evaluator: str):
+            return json.dumps(self.evaluate(result, evaluator).model_dump())
+
+        # need to dump to string for gather to work
         result = await asyncio.gather(
-            *[self.evaluate(result, evaluator.name) for evaluator in self.instantiated]  # type: ignore
+            *[
+                process_eval_async(result, evaluator)
+                for evaluator in [
+                    "formatting",
+                    "g_eval_policy",
+                    "g_eval_faithfulness",
+                    "system_response",
+                    "patronus_lynx",
+                    "vectara",
+                ]
+            ]  # type: ignore
         )
+        result = [json.loads(r) for r in result]  # type: ignore
         return result
 
     def did_system_respond(self, result: EndToEndGeneration):

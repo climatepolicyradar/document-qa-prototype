@@ -320,6 +320,7 @@ class RAGResponse(BaseModel):
     retrieved_documents: list[dict]
     query: str
     highlights: Optional[list[str]] = None
+    metadata: Optional[dict] = None
 
     # LangChain uses pydantic v1 internally, so can't pass LangChainDocuments here
 

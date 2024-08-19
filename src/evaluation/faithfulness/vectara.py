@@ -17,6 +17,10 @@ class Vectara(Evaluator):
     def __init__(self):
         self.session = requests.Session()
 
+    def get_success(self, score: float) -> bool:
+        """Returns whether the score is a success for this evaluator"""
+        return score >= 0.6
+
     def evaluate(self, generation: EndToEndGeneration) -> Optional[Score]:
         """Evaluates the data"""
         self._validate_generation(generation)
@@ -32,11 +36,12 @@ class Vectara(Evaluator):
             api_response = self.session.post(self.API_URL, json=payload)
             api_response.raise_for_status()
             result = api_response.json()
-
+            score = float(result.get("score", 0))
             return Score(
-                score=float(result.get("score", 0)),
+                score=score,
                 type=self.TYPE,
                 name=self.NAME,
+                success=self.get_success(score),
                 gen_uuid=generation.uuid,  # type: ignore
             )
         except requests.RequestException as e:

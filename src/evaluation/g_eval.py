@@ -40,7 +40,7 @@ class GEval(Evaluator, ABC):
         if prompt is None:
             prompt = self.get_prompt(generation)
         response = self.model.invoke(prompt)
-        
+
         result = response.content.strip()
 
         if not result.isdigit():  # type: ignore
@@ -51,6 +51,7 @@ class GEval(Evaluator, ABC):
         if score is not None:
             return Score(
                 score=(score - 1) / 4.0,  # type: ignore
+                success=self.get_success(score),
                 type=self.TYPE,
                 name=self.NAME,
                 gen_uuid=generation.uuid,  # type: ignore
@@ -59,6 +60,11 @@ class GEval(Evaluator, ABC):
     @abstractmethod
     def get_prompt(self, generation: EndToEndGeneration) -> str:
         """Returns the prompt for the evaluator"""
+        pass
+
+    @abstractmethod
+    def get_success(self, score: float) -> bool:
+        """Returns the success of the evaluator"""
         pass
 
     def response_postprocessor(self, response) -> Optional[int]:

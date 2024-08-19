@@ -201,6 +201,7 @@ async def get_highlights(source_id: str):
 
     async def process_assertion(assertion):
         return {
+            "citations": assertion.citations,
             "answerSubstring": assertion.assertion,
             "citationSubstring": await app_context[
                 "rag_controller"
@@ -227,4 +228,5 @@ async def evaluate(source_id: str):
     gen_model = qa_pair.to_end_to_end_generation()
 
     evals = await ec.evaluate_async(gen_model)
+    print(evals)
     return evals

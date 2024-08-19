@@ -9,6 +9,7 @@ import src.config as config
 
 LOGGER = get_logger(__name__)
 
+
 @evaluators.register("g_eval_policy")
 class GEvalPolicy(GEval):
     """G-Eval for policy aligment"""
@@ -36,3 +37,7 @@ class GEvalPolicy(GEval):
             question=generation.rag_request.query,
             answer=generation.get_answer(),  # type: ignore
         )
+
+    def get_success(self, score: float) -> bool:
+        """Returns whether the score is a success for this evaluator"""
+        return score <= 0.2
