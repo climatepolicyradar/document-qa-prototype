@@ -41,9 +41,9 @@ jobs:
       - name: Install guardrails dependencies
         run: |
           poetry run python -m guardrails install
-          guardrails hub install hub://guardrails/detect_pii
-          guardrails hub install hub://guardrails/toxic_language
-          guardrails hub install hub://guardrails/web_sanitization
+          poetry run python -m guardrails hub install hub://guardrails/detect_pii
+          poetry run python -m guardrails hub install hub://guardrails/toxic_language
+          poetry run python -m guardrails hub install hub://guardrails/web_sanitization
 
       - name: Run test suite
         env:
