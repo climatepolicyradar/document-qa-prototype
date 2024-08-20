@@ -14,6 +14,8 @@ models:
 model_selection: all
 prompt_templates:
   - prompt_template: evals-answers-0.0.1/basic_answer
+  - prompt_template: no-answers-test/basic_answer_response_educational
+  - prompt_template: no-answers-test/basic_answer_response_query_analysis
 template_selection: all
 retrieval:
   - retrieval_window: 1

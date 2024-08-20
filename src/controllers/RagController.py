@@ -202,7 +202,7 @@ class RagController:
             metadata["assertions"] = self.extract_assertions_from_answer(response_text)
         except Exception as e:
             LOGGER.error(f"Error extracting assertions: {e}")
-            metadata["assertions"] = ["Could not extract assertions"]
+            metadata["errors"] = ["Could not extract assertions"]
 
         response = EndToEndGeneration(
             config=scenario.get_config(),
