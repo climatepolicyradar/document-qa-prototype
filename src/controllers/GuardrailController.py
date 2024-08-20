@@ -2,6 +2,10 @@ from enum import Enum
 from guardrails import Guard, OnFailAction
 from guardrails.hub import ToxicLanguage, DetectPII, WebSanitization
 
+from src import config  # needed to load secrets from AWS credentials manager
+
+assert config
+
 
 class GuardrailType(Enum):
     """Available guardrail types"""

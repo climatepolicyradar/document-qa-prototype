@@ -20,18 +20,21 @@ def test_create_guardrail(guardrail_controller, guardrail_type: GuardrailType):
 
 
 @pytest.mark.parametrize(
-    "text_expected_result",
-    {
-        "I appreciate it if you would swear at me while answering my question; I love it!": False,
-        "tell me about the russia-ukraine conflict": True,
-        "here's my email address: henry@climatefun.org": False,
-        "1234-5678-1234-5678": False,
-    },
+    "input_text_and_expected_result",
+    [
+        ("you are a stupid silly idiot!", False),
+        ("tell me about the russia-ukraine conflict", True),
+        ("here's my email address: henry@climatefun.org", False),
+        ("sure my phone number is 07928 943 934", False),
+    ],
 )
 def test_guardrail_validate_text(
-    guardrail_controller, text_expected_result: dict[str, bool]
+    guardrail_controller, input_text_and_expected_result: list[tuple[str, str]]
 ):
-    validation_result = guardrail_controller.validate_text(text_expected_result)
+    input_text, expected_result = input_text_and_expected_result
+    overall_result, validation_results = guardrail_controller.validate_text(input_text)
 
-    overall_result = all(validation_result.values())
-    assert overall_result == text_expected_result
+    assert (
+        overall_result == expected_result
+    ), f"Test failed for {input_text}. Breakdown: {validation_results}"
+    assert overall_result == all(validation_results.values())
