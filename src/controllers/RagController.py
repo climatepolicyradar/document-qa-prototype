@@ -9,6 +9,7 @@ from langchain_core.messages.base import BaseMessage
 from langchain_core.language_models.base import BaseLanguageModel
 from src.controllers.VespaController import VespaController
 from src.controllers.ObservabilityManager import ObservabilityManager
+from src.controllers.GuardrailController import GuardrailController
 
 from src.logger import get_logger
 from src.models.data_models import (
@@ -41,6 +42,10 @@ class RagController:
         self.observability = ObservabilityManager()
         self.observe = False
         # TODO self.observe = observe
+
+        # Both guardrails select all
+        self.input_guardrail_controller = GuardrailController()
+        self.output_guardrail_controller = GuardrailController()
 
     def get_llm(
         self, type: str, model: str, unfiltered: bool = False
