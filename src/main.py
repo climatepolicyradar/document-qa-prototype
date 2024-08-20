@@ -12,7 +12,7 @@ from src.controllers.RagController import RagController
 from src.controllers.ScenarioController import ScenarioController
 from cpr_data_access.models import BaseDocument
 from src.logger import get_logger
-from src.models.data_models import Prompt, RAGRequest, Scenario
+from src.models.data_models import RAGRequest
 from src.online.inference import LLMTypes
 from src import config
 from src.models.data_models import QAPair
@@ -106,20 +106,10 @@ def do_rag(request: RAGRequest) -> dict:
         query=request.query, scenario=request.as_scenario(dc)
     )
 
-    if not ec.did_system_respond(result):
-        LOGGER.info(
-            f"🔍 System did not respond to the user query: {result.get_answer()}"
-        )
-        scenario = Scenario(
-            prompt=Prompt.from_template("response/summarise_simple"),
-            model="mistral-nemo",
-            generation_engine=LLMTypes.VERTEX_AI.value,
-        )
-        summary = app_context["rag_controller"].run_llm(
-            scenario, {"query_str": result.rag_response.retrieved_passages_as_string()}
-        )
-        LOGGER.info(f"🔍 System summarised the query: {result.get_answer()}")
-        result.rag_response.text += f"\n\nWe found the following sources that may help answer the question:\n\n {summary}"
+    result.rag_response.metadata["responded"] = result.rag_response.refused_answer()
+
+    if result.rag_response.refused_answer():
+        result = app_context["rag_controller"].execute_no_answer_flow(result)
 
     db_save = QAPair.from_end_to_end_generation(result, "prototype")
     db_save.save()

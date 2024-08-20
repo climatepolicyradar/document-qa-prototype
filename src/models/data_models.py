@@ -2,7 +2,7 @@ from enum import Enum
 import json
 import jinja2
 from pydantic import BaseModel, ConfigDict, model_validator
-from typing import Optional
+from typing import Any, Optional
 import datetime
 from wandb.sdk.data_types.trace_tree import Trace
 from cpr_data_access.models import BaseDocument
@@ -328,6 +328,12 @@ class RAGResponse(BaseModel):
     def citation_numbers(self) -> set[int]:
         """Returns the citation numbers that are used to code the sources"""
         return set(range(0, len(self.retrieved_documents)))
+
+    def add_metadata(self, key: str, value: Any) -> None:
+        """Adds metadata to the RAG response."""
+        if self.metadata is None:
+            self.metadata = {}
+        self.metadata[key] = value
 
     def refused_answer(self) -> bool:
         """

@@ -173,9 +173,8 @@ class ScenarioController:
             else config.root.parent / self.config["seed_queries_path"]
         )
         print(f"🤖 Loading seed queries from {seed_queries_path}")
-        _open = self._get_file_opener(seed_queries_path)
 
-        with _open(seed_queries_path) as f:
+        with open(seed_queries_path) as f:
             seed_queries: list[Query] = [
                 Query(**json.loads(line)) for line in f.readlines() if line
             ]
@@ -184,6 +183,7 @@ class ScenarioController:
         return seed_queries
 
     def _get_file_opener(self, file_path: str):
+        # TODO s3fs was seriously bugging. Needs reworking. Using local file for now.
         if file_path.startswith("s3://"):
             labs_key = json.loads(get_secret("LABS_CREDS"))
 

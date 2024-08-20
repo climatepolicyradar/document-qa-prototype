@@ -20,7 +20,7 @@ from src.models.data_models import (
     RAGRequest,
     RAGResponse,
 )
-from src.online.inference import get_llm
+from src.online.inference import LLMTypes, get_llm
 from src.dataset_creation.query_utils import (
     render_document_text_for_llm,
     sanitise_response_text,
@@ -288,6 +288,32 @@ class RagController:
         )
 
         return response
+
+    def execute_no_answer_flow(self, result: EndToEndGeneration) -> EndToEndGeneration:
+        """Used to generate the information for no answer flows"""
+
+        LOGGER.info(
+            f"🔍 System did not respond to the user query: {result.rag_request.query}: {result.get_answer()}"
+        )
+        scenario = Scenario(
+            prompt=Prompt.from_template("response/summarise_simple"),
+            model="mistral-nemo",
+            generation_engine=LLMTypes.VERTEX_AI.value,
+        )
+
+        if result.rag_response is None:
+            raise ValueError("RAG response is None")
+
+        summary = self.run_llm(
+            scenario, {"query_str": result.rag_response.retrieved_passages_as_string()}
+        )
+
+        LOGGER.info(f"🔍 System summarised the query: {summary}")
+        result.rag_response.add_metadata("no_answer_summary", summary)
+        result.rag_response.add_metadata(
+            "no_answer_assertions", self.extract_assertions_from_answer(summary)
+        )
+        return result
 
     def extract_assertions_from_answer(
         self,

@@ -1,5 +1,5 @@
 Given are the following sources: [BEGIN OF SOURCES]
-{query_str}
+{{query_str}}
 [END OF SOURCES]
 
 Summarise the sources into a list of cited bullet points covering the most important points from the sources.

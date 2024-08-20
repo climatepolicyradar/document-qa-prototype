@@ -50,7 +50,7 @@ class MultiAxisEvaluator(Evaluator):
                 score = evaluator.evaluate(generation)
             except Exception as e:
                 logger.error(
-                    f"Error evaluating {generation.uuid} with {evaluator.NAME}: {e}"
+                    f"Error evaluating {generation.uuid} with {evaluator.NAME}/{evaluator.TYPE}: {e}"
                 )
                 continue
             if isinstance(score, list):

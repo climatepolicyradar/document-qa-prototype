@@ -35,6 +35,10 @@ class EvaluationController:
             self.get_evaluator("vectara"),
         ]  # The registry doesn't instantiate the evaluators properly, so load them separately
 
+    def set_evaluators(self, evals: list[str]):
+        """Set a custom set of evaluators to use"""
+        self.instantiated = [self.get_evaluator(e) for e in evals]
+
     def get_all_evaluators(self):
         """Retrieve all registered evaluators."""
         return self.instantiated
@@ -110,9 +114,16 @@ class EvaluationController:
 
     async def evaluate_async(self, result: EndToEndGeneration):
         """Evaluate the given result using all instantiated evaluators in parallel. Coupled to API usage. Needs a good refactor really."""
+        if result is None or result.rag_response is None:
+            LOGGER.warning("Result is None, skipping evaluation")
+            return None
 
-        async def process_eval_async(result: EndToEndGeneration, evaluator: str):
-            return json.dumps(self.evaluate(result, evaluator).model_dump())
+        async def process_eval_async(gen: EndToEndGeneration, evaluator: str):
+            result = self.evaluate(gen, evaluator)
+            if result is not None:
+                return json.dumps(result.model_dump())
+            else:
+                return None
 
         # need to dump to string for gather to work
         result = await asyncio.gather(
@@ -128,7 +139,8 @@ class EvaluationController:
                 ]
             ]  # type: ignore
         )
-        result = [json.loads(r) for r in result]  # type: ignore
+        filtered_results = [r for r in result if r is not None]
+        result = [json.loads(r) for r in filtered_results]  # type: ignore
         return result
 
     def did_system_respond(self, result: EndToEndGeneration):
