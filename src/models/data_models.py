@@ -387,6 +387,7 @@ class AssertionModel(BaseModel):
 
     assertion: str
     citations: list[str]
+    uuid: Optional[str] = ""
 
     @model_validator(mode="before")
     @classmethod
@@ -398,7 +399,26 @@ class AssertionModel(BaseModel):
         assert isinstance(
             data["citations"], list
         ), "Citations must be a list of strings"
+
+        if "uuid" not in data:
+            data["uuid"] = str(uuid.uuid4())
         return data
+
+    def to_atomic_assertions(self) -> list["AssertionModel"]:
+        """Returns a list of AssertionModels with a single assertion and a single citation representing all assertion<->citation pairs (e.g. thing [1,2] returns thing [1] and thing [2])"""
+        atomic_assertions = []
+
+        for citation in self.citations:
+            atomic_assertion = AssertionModel(
+                assertion=self.assertion,
+                citations=[citation],
+                uuid=self.uuid,  # Use for parent
+            )
+            atomic_assertions.append(atomic_assertion)
+
+        assert len(atomic_assertions) > 0, "No atomic assertions created"
+
+        return atomic_assertions
 
     def citations_as_string(self) -> str:
         """Returns a string representation of the citations."""

@@ -88,7 +88,7 @@ class RagController:
         llm = self.get_llm(scenario.generation_engine, scenario.model)
         prompt = scenario.prompt.prompt_content.render(prompt_data)
 
-        LOGGER.info(f"🤔 Running {scenario.model} and prompt: {prompt}")
+        LOGGER.info(f"🤔 Running {scenario.model}")
 
         if self.observe:
             result = llm.invoke(
@@ -269,6 +269,13 @@ class RagController:
         duration = end_time - start_time
         LOGGER.info(f"Duration: {duration}")
 
+        metadata = {}
+        try:
+            metadata["assertions"] = self.extract_assertions_from_answer(response_text)
+        except Exception as e:
+            LOGGER.error(f"Error extracting assertions: {e}")
+            metadata["errors"] = ["Could not extract assertions"]
+
         response = EndToEndGeneration(
             config=scenario.get_config(),
             rag_request=RAGRequest.from_scenario(query, scenario),
@@ -276,6 +283,7 @@ class RagController:
                 text=response_text,
                 retrieved_documents=[d.dict() for d in documents],
                 query=query,
+                metadata=metadata,
             ),
         )
 
@@ -293,9 +301,13 @@ class RagController:
         self,
         query: str,
         assertion: AssertionModel,
-        context_str: str,
+        retrieved_documents: list[dict],
     ) -> str:
-        """Highlight the key quotes in the given assertion."""
+        """
+        Highlight the key quotes in the given assertion.
+
+        Assumes that the given assertion model has only one citation. pre-process using .to_atomic_assertions if that is not the case.
+        """
         highlight_prompt_key = "response/extract_key_quotes"
 
         highlight_scenario = Scenario(
@@ -306,11 +318,12 @@ class RagController:
         args = {
             "query_str": query,
             "assertion": assertion.assertion,
-            "cited_sources": assertion.citations_as_string(),
-            "context_str": context_str,
+            "context_str": retrieved_documents[int(assertion.citations[0]) - 1][
+                "page_content"
+            ],
         }
 
-        LOGGER.info(f"🔍 Running highlight scenario with args: {args}")
+        LOGGER.info(f"🔍 Running {assertion} highlight scenario with args: {args}")
         highlight_text = self.run_llm(highlight_scenario, args)
         LOGGER.info(f"🔍 Highlighted text: {highlight_text}")
         return highlight_text
@@ -326,8 +339,6 @@ class RagController:
 
         results = []
         for sentence, citations in matches:
-            LOGGER.info(f"🔍 Extracted sentence: {sentence}")
-            LOGGER.info(f"🔍 Extracted citations: {citations}")
             citation_numbers = [c.strip() for c in citations.split(",")]
             results.append((sentence.strip(), citation_numbers))
 

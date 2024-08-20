@@ -1,12 +1,12 @@
-Given the following sources: [BEGIN OF SOURCES]
+Given the following source: [BEGIN OF SOURCE]
 {{context_str}}
-[END OF SOURCES]
+[END OF SOURCE]
 And an assertion extracted from the AI-generated answer to the question "{query_str}" \n 
 [ASSERTION]
 {{assertion}}
 [END OF ASSERTION]
 
-Extract the text from sources numbered {{cited_sources}} that most directly support the assertion. The extracted text should be a substring of the passage from the source. The substring should be a short part of the passage that directly supports the assertion. Output only the substring.
+Extract the text from the source that most directly supports the assertion. The extracted text must be a substring of the passage from the source. The substring must be a short part of the passage that directly supports the assertion. Output only the substring.
 
 - Output ONLY extracted text EXACTLY as it appears in the source
 - Do not output any other text

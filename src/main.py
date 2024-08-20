@@ -199,23 +199,49 @@ async def get_highlights(source_id: str):
         gen_model.get_answer()
     )
 
+    LOGGER.info(gen_model.rag_request.query)
+    LOGGER.info(gen_model.rag_request.document_id)
+
     async def process_assertion(assertion):
         return {
             "citations": assertion.citations,
             "answerSubstring": assertion.assertion,
+            "uuid": assertion.uuid,
             "citationSubstring": await app_context[
                 "rag_controller"
             ].highlight_key_quotes(
                 gen_model.rag_request.query,
                 assertion,
-                gen_model.rag_response.retrieved_passages_as_string(),  # type: ignore
+                gen_model.rag_response.retrieved_documents,  # type: ignore
             ),
         }
 
     LOGGER.info("🚀 Launching parallel highlight processing")
+    all_assertions = [
+        atomic
+        for assertion in assertions
+        for atomic in assertion.to_atomic_assertions()
+    ]
+
     highlights = await asyncio.gather(
-        *[process_assertion(assertion) for assertion in assertions]
+        *[process_assertion(assertion) for assertion in all_assertions]
     )
+
+    LOGGER.info("🧠 Consolidating highlights by UUID")
+    consolidated_highlights = {}
+    for highlight in highlights:
+        uuid = highlight["uuid"]
+        if uuid not in consolidated_highlights:
+            consolidated_highlights[uuid] = {
+                "answerSubstring": highlight["answerSubstring"],
+                "citationSubstrings": {},
+            }
+        consolidated_highlights[uuid]["citationSubstrings"][
+            highlight["citations"][0]
+        ] = highlight["citationSubstring"]
+
+    highlights = list(consolidated_highlights.values())
+    LOGGER.info(f"🎭 Consolidated {len(highlights)} unique assertions")
     LOGGER.info(f"✅ Processed {len(highlights)} highlights in parallel")
 
     return highlights
