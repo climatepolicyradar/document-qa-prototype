@@ -38,6 +38,13 @@ jobs:
           poetry run python -m nltk.downloader stopwords
           poetry run python -m nltk.downloader punkt
 
+      - name: Install guardrails dependencies
+        run: |
+          poetry run python -m guardrails install
+          guardrails hub install hub://guardrails/detect_pii
+          guardrails hub install hub://guardrails/toxic_language
+          guardrails hub install hub://guardrails/web_sanitization
+
       - name: Run test suite
         env:
           GOOGLE_APPLICATION_CREDENTIALS_BASE64: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_BASE64 }}
