@@ -20,7 +20,7 @@ def text_is_too_long_for_model(text: str, model_name: Optional[str] = None) -> b
         LOGGER.error(f"Error checking text length: {e}")
         return False
     """
-    
+
     enc_gpt_4 = tiktoken.encoding_for_model("gpt-4-32k")
     _encoded_doc = enc_gpt_4.encode(text)
 

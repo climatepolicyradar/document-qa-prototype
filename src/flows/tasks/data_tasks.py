@@ -129,6 +129,24 @@ def get_answers_needing_evals(db: Database, tag: str, limit: int = 10) -> list[Q
     return answers
 
 
+def get_qa_pairs_with_evals(db: Database, tag: str, limit: int) -> list[QAPair]:
+    """
+    Gets the QA pairs with non-empty eval results for a given tag
+
+    TODO: Performs a join with the Query table to get the query prompt type
+    """
+    logger = get_run_logger()
+    answers = [
+        qa
+        for qa in QAPair.select()
+        .where(QAPair.pipeline_id == tag)
+        .where(QAPair.evals != {})
+        .limit(limit)
+    ]
+    logger.info(f"🎲 Got {len(answers)} answers with evals")
+    return answers
+
+
 def get_answer_by_id(db: Database, id: int) -> QAPair:
     logger = get_run_logger()
     answer = QAPair.get_or_none(QAPair.id == id)

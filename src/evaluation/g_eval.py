@@ -40,7 +40,7 @@ class GEval(Evaluator, ABC):
         if prompt is None:
             prompt = self.get_prompt(generation)
         response = self.model.invoke(prompt)
-        
+
         result = response.content.strip()
 
         if not result.isdigit():  # type: ignore
