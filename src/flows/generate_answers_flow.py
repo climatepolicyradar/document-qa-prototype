@@ -68,7 +68,9 @@ def queue_answer_tasks(
 
 
 @flow
-def run_answers_from_queue(tag: str = "prompt-answer-experiment", limit: int = 5):
+def process_answer_job_from_queue(
+    tag: str = "prompt-answer-experiment", limit: int = 15
+):
     db = get_db()
     logger = get_run_logger()
     dc = DocumentController()
@@ -90,17 +92,16 @@ def run_answers_from_queue(tag: str = "prompt-answer-experiment", limit: int = 5
 
         query = get_query_by_id(db, job.data["query_id"])
 
-        generate_answer_full.submit(query, scenario, db, tag, job.data["query_tag"])
+        generate_answer_full(query, scenario, db, tag, job.data["query_tag"])
 
 
-@task(tags=["generate_answer"])
+@task
 def generate_answer_full(
     query: Query, scenario: Scenario, db: Database, tag: str, query_tag: str
 ):
+    logger = get_run_logger()
     dc = DocumentController()
     rc = RagController()
-
-    logger = get_run_logger()
 
     assert query.document_id is not None, "Document ID is None"
     scenario.document = dc.create_base_document(str(query.document_id))
@@ -129,11 +130,11 @@ def queue_answer_flow(
     """
     sc = ScenarioController.from_config(config)
 
-    queue_answer_tasks(sc.scenarios, tag, query_tag, only_new)
+    queue_answer_tasks.submit(sc.scenarios, tag, query_tag, only_new)
 
 
 def main(tag: str, config: str, query_tag: str, only_new: bool):
-    # run_answers_from_queue(tag, limit=2)
+    # process_answer_job_from_queue(tag, limit=2)
     # spawn_answer_tasks(tag, limit=2)
     queue_answer_flow(config, tag, query_tag, only_new)
 
