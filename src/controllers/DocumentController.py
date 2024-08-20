@@ -44,6 +44,8 @@ class DocumentController:
 
         assert not document_row.empty, "❌ Document ID not found in metadata"
 
+        logger.info(f"📄 Document row: {document_row}")
+
         document = BaseDocument(
             document_id=document_id,
             document_name=document_row["Document Title"].values[0].strip()
@@ -63,5 +65,7 @@ class DocumentController:
             if document_row["Language"].values[0] != "English"
             else False,
         )
+
+        logger.info(f"📄 Document {document.document_id} fleshed out with metadata")
 
         return document
