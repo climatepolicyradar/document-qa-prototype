@@ -111,8 +111,11 @@ def do_rag(request: RAGRequest) -> dict:
     if result.rag_response.refused_answer():
         result = app_context["rag_controller"].execute_no_answer_flow(result)
 
-    db_save = QAPair.from_end_to_end_generation(result, "prototype")
-    db_save.save()
+    try:
+        db_save = QAPair.from_end_to_end_generation(result, "prototype")
+        db_save.save()
+    except Exception as e:
+        LOGGER.error(f"Error saving to database: {e}")
 
     return_json = result.model_dump()
     return return_json
