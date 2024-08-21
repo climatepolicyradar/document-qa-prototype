@@ -12,14 +12,15 @@ from src.ingestion.utils import BLOCK_SEPARATOR
 @pytest.fixture
 def document():
     doc_path = "./data/documents/"
+
     return BaseDocument.load_from_local(
-        doc_path, document_id="CCLW.executive.8737.1424"
+        doc_path, document_id="CCLW.executive.8737.1422"
     )
 
 
 @pytest.mark.parametrize(
     ("n_text_blocks_in_chunk", "last_chunk_size", "num_chunks"),
-    [(5, 1, 182), (10, 6, 91), (10000000, 906, 1)],
+    [(5, 2, 750), (10, 7, 375), (10000000, 3747, 1)],
 )
 def test_conversion_and_splitting(
     document, n_text_blocks_in_chunk, last_chunk_size, num_chunks

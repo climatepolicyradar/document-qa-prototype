@@ -40,7 +40,7 @@ class GEval(Evaluator, ABC):
         if prompt is None:
             prompt = self.get_prompt(generation)
         response = self.model.invoke(prompt)
-
+s
         if hasattr(response, "content"):
             result = response.content.strip()
         elif isinstance(response, str):
@@ -51,11 +51,13 @@ class GEval(Evaluator, ABC):
         if not result.isdigit():  # type: ignore
             raise ValueError(f"G-Eval score is not a digit: {result}")  # type: ignore
 
+
         score = self.response_postprocessor(result)
 
         if score is not None:
             return Score(
                 score=(score - 1) / 4.0,  # type: ignore
+                success=self.get_success(score),
                 type=self.TYPE,
                 name=self.NAME,
                 gen_uuid=generation.uuid,  # type: ignore
@@ -69,3 +71,8 @@ class GEval(Evaluator, ABC):
     def response_postprocessor(self, response: str) -> Optional[int]:
         """Post-processes the response"""
         return int(response)
+
+    @abstractmethod
+    def get_success(self, score: float) -> bool:
+        """Returns the success of the evaluator"""
+        pass

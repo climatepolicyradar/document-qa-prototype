@@ -9,29 +9,35 @@ def pivot_table_by_eval(
     eval_axis: str,
     index_attribute: str,
     column_attribute: str,
-    aggregation_func: Optional[Callable] = None,
+    aggregation_func: str = "mean",
+    transformation_func: Optional[Callable] = None,
 ) -> pd.DataFrame:
     """
     Creates a pivot table of the dataframe with the values of the evals aggregated.
 
     Args:
-       df (pd.DataFrame): the qa-pairs dataframe
-       evals (pd.DataFrame): the evals dataframe
-       eval_axis (str): the axis of evaluation to use for the aggregation
-       index_attribute (str): the attribute to use as the index (e.g. model)
-       column_attribute (str): the attribute to use as the columns (e.g. query-prompt)
-       aggregation_func (Optional[Callable]): an optional aggregation function to apply to the evals values (in case of faithfulness for example, where threshold is to be applied)
+        df (pd.DataFrame): the qa-pairs dataframe
+        evals (pd.DataFrame): the evals dataframe
+        eval_axis (str): the axis of evaluation to use for the aggregation
+        index_attribute (str): the attribute to use as the index (e.g. model)
+        column_attribute (str): the attribute to use as the columns (e.g. query-prompt)
+        transformation_func (Optional[Callable]): an optional transformation function to apply to the evals values (in case of faithfulness for example, where threshold is to be applied)
+        aggregation_func (str): aggregation of the values in the pivot table (defaults to mean)
 
     Returns:
        pd.DataFrame: pivot table with the aggregated
     """
-    df["_tmp"] = df["id"].map(evals[eval_axis].to_dict())
+    _df = df.copy()
+    _df["_tmp"] = _df["id"].map(evals[eval_axis].to_dict())
 
-    if aggregation_func is not None:
-        df["_tmp"] = df["_tmp"].apply(aggregation_func)
+    if transformation_func is not None:
+        _df["_tmp"] = _df["_tmp"].apply(transformation_func)
 
-    return df.pivot_table(
-        index=index_attribute, columns=column_attribute, values="_tmp", aggfunc="mean"
+    return _df.pivot_table(
+        index=index_attribute,
+        columns=column_attribute,
+        values="_tmp",
+        aggfunc=aggregation_func,
     )
 
 

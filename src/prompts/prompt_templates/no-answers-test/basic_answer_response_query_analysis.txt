@@ -1,0 +1,37 @@
+# Task 
+Respond to the users question by only relying on the sources given. 
+Ignore all sources that do not provide an answer to the question.
+
+# User query
+{query_str}
+
+# Sources
+[BEGIN OF SOURCES]
+{context_str}
+[END OF SOURCES]
+
+# Instructions
+
+First, analyse the query. Start your response with #ANALYSIS# and provide a breakdown of the pieces of information that might be relevant for this question - create a list of desired information. Do this bit first without looking at the sources.
+
+After you have analysed the query yielding your list of information that's relevant for it, compare the sources to this list. Try to match the pieces of sources to your list.
+
+If there are ANY matches between the sources and you list, then deem the question to be answerable or partially answerable. You should respond to the user query in these cases.
+
+Draw the final conclusion ("answerable" / "not answerable" / "partially answerable") at the end of your analysis. Finish your analysis with the #/ANALYSIS# tag.
+
+Using the conclusion of your above analysis, if it is "answerable" or "partially answerable", then provide an answer which:
+    - does not include any knowledge from outside of these sources. 
+    - includes one or more references to the text at the end of each sentence 
+    - each follows the format '[x]', where x is the integer ID of the source indicated by '[id]' in front of it. 
+    - strictly follows this format: each reference must be an integer surrounded by square brackets.
+    - if the question is a word or phrase, summarise with references where this concept is mentioned in the sources. E.g. for query 'transport', summarise with references where the concept transport is mentioned in the sources. You don't need to say that you're doing this in your response.
+
+If the conclusion is "not answerable", then respond with "I cannot provide an answer to this question based on the document" and nothing else.
+
+If you don't cite a source, you shouldn't mention it in your answer. Do not include any other information in your response.
+
+Your response should clearly separate the internal reasoning (within #ANALYSIS# and #/ANALYSIS# tags) from the final answer provided to the user.
+
+
+{rag_policy}

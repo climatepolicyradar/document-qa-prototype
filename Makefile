@@ -6,6 +6,11 @@ install:
 	poetry run pre-commit install
 	poetry run ipython kernel install --user
 
+install_guardrails:
+	guardrails hub install hub://guardrails/detect_pii
+	guardrails hub install hub://guardrails/toxic_language
+	guardrails hub install hub://guardrails/web_sanitization
+
 test:
 	poetry run python -m pytest -vvv
 
@@ -15,7 +20,10 @@ run_streamlit_demo:
 run_streamlit_analysis:
 	poetry run python -m streamlit run ./src/streamlit/qa_review_app.py
 
-build_api: export_env_vars
+make_document_metadata:
+	poetry run python -m src.scripts.generate_document_data
+
+build_api: export_env_vars make_document_metadata
 	docker build -t document-qa-api -f docker/Dockerfile.api .
 
 run_api:

@@ -2,7 +2,7 @@ from enum import Enum
 import json
 import jinja2
 from pydantic import BaseModel, ConfigDict, model_validator
-from typing import Optional
+from typing import Any, Optional
 import datetime
 from wandb.sdk.data_types.trace_tree import Trace
 from cpr_data_access.models import BaseDocument
@@ -235,6 +235,27 @@ class QAPair(Model):
 
         database = db
 
+    @classmethod
+    def get_by_source_id(cls, source_id: str) -> "QAPair":
+        """Returns a QAPair object by source_id."""
+        return cls.select().where(cls.source_id == source_id).first()
+
+    @classmethod
+    def from_end_to_end_generation(cls, generation: "EndToEndGeneration", tag: str):
+        """Converts an EndToEndGeneration object to a QAPair object."""
+        return cls(
+            document_id=generation.rag_request.document_id,
+            model=generation.rag_request.model,
+            prompt=generation.rag_request.prompt_template,
+            pipeline_id=tag,
+            question=generation.rag_request.query,
+            answer=generation.get_answer(False),
+            evals={},
+            metadata={},
+            source_id=generation.uuid,
+            generation=generation.model_dump_json(),
+        )
+
     def to_end_to_end_generation(self) -> "EndToEndGeneration":
         """Converts the QAPair object to an EndToEndGeneration object."""
         gen_dict = json.loads(self.generation)
@@ -269,7 +290,7 @@ class RAGRequest(BaseModel):
         """Returns the RAGRequest as a Scenario object."""
         return Scenario(
             model=self.model if self.model else "",
-            generation_engine=str(self.generation_engine),
+            generation_engine=str(self.generation_engine.value),
             prompt=Prompt.from_template(prompt_template=self.prompt_template),
             document=dc.create_base_document(document_id=self.document_id),
             retrieval_window=self.retrieval_window,
@@ -299,6 +320,7 @@ class RAGResponse(BaseModel):
     retrieved_documents: list[dict]
     query: Optional[str]
     highlights: Optional[list[str]] = None
+    metadata: Optional[dict] = None
 
     # LangChain uses pydantic v1 internally, so can't pass LangChainDocuments here
 
@@ -306,6 +328,12 @@ class RAGResponse(BaseModel):
     def citation_numbers(self) -> set[int]:
         """Returns the citation numbers that are used to code the sources"""
         return set(range(0, len(self.retrieved_documents)))
+
+    def add_metadata(self, key: str, value: Any) -> None:
+        """Adds metadata to the RAG response."""
+        if self.metadata is None:
+            self.metadata = {}
+        self.metadata[key] = value
 
     def refused_answer(self) -> bool:
         """
@@ -365,6 +393,7 @@ class AssertionModel(BaseModel):
 
     assertion: str
     citations: list[str]
+    uuid: Optional[str] = ""
 
     @model_validator(mode="before")
     @classmethod
@@ -376,7 +405,26 @@ class AssertionModel(BaseModel):
         assert isinstance(
             data["citations"], list
         ), "Citations must be a list of strings"
+
+        if "uuid" not in data:
+            data["uuid"] = str(uuid.uuid4())
         return data
+
+    def to_atomic_assertions(self) -> list["AssertionModel"]:
+        """Returns a list of AssertionModels with a single assertion and a single citation representing all assertion<->citation pairs (e.g. thing [1,2] returns thing [1] and thing [2])"""
+        atomic_assertions = []
+
+        for citation in self.citations:
+            atomic_assertion = AssertionModel(
+                assertion=self.assertion,
+                citations=[citation],
+                uuid=self.uuid,  # Use for parent
+            )
+            atomic_assertions.append(atomic_assertion)
+
+        assert len(atomic_assertions) > 0, "No atomic assertions created"
+
+        return atomic_assertions
 
     def citations_as_string(self) -> str:
         """Returns a string representation of the citations."""

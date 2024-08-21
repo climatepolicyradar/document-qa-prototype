@@ -1,7 +1,7 @@
 FROM python:3.11-slim
 
-RUN mkdir /app
-WORKDIR /app
+RUN mkdir /opt/prefect
+WORKDIR /opt/prefect
 
 ARG PREFECT_API_KEY
 ARG DEBIAN_FRONTEND="noninteractive"
@@ -11,6 +11,9 @@ RUN pip install --no-cache poetry
 COPY pyproject.toml ./
 RUN poetry config virtualenvs.create false
 RUN poetry install --no-interaction --no-root
+RUN poetry run guardrails hub install hub://guardrails/detect_pii
+RUN poetry run guardrails hub install hub://guardrails/toxic_language
+RUN poetry run guardrails hub install hub://guardrails/web_sanitization
 
 # Copy files to image
 COPY data ./data
@@ -22,6 +25,7 @@ RUN prefect config set PREFECT_API_KEY="$PREFECT_API_KEY"
 ENV PYTHONPATH=/app
 # Make port available to the world outside this container
 EXPOSE 80
+EXPOSE 443
 
 # Run the application with Uvicorn
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "80"]

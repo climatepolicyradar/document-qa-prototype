@@ -5,6 +5,10 @@ from typing import Optional
 from dotenv import load_dotenv, find_dotenv
 from src.flows.utils import get_secret
 from pathlib import Path
+from src.logger import get_logger
+
+logger = get_logger(__name__)
+logger.info("Beginning configuration setup")
 
 load_dotenv(find_dotenv(), override=True)
 
@@ -20,6 +24,8 @@ VESPA_KEY: Optional[str] = get_secret("VESPA_KEY_LOCATION")
 
 # Lol i can't believe I have to do this again why don't anyone just let you pass actual data rather than file paths
 if not VESPA_CERT or VESPA_CERT == "" or not VESPA_KEY or VESPA_KEY == "":
+    logger.info("VESPA_CERT or VESPA_KEY not found, downloading from AWS SSM")
+
     cert_content = get_secret("VESPA_CERT")
     key_content = get_secret("VESPA_KEY")
 
@@ -32,8 +38,11 @@ if not VESPA_CERT or VESPA_CERT == "" or not VESPA_KEY or VESPA_KEY == "":
     with open(key_path, "w") as key_file:
         key_file.write(key_content)
 
-    VESPA_CERT = str(cert_path.resolve())
-    VESPA_KEY = str(key_path.resolve())
+    # Assume running in docker container, which is /app workdir
+    VESPA_CERT = f"/opt/prefect/{cert_path}"
+    VESPA_KEY = f"/opt/prefect/{key_path}"
+
+    logger.info(f"VESPA_CERT: {VESPA_CERT}, VESPA_KEY: {VESPA_KEY}")
 
 
 def _assert_path_exists(path: Path):
@@ -67,6 +76,18 @@ if encoded_creds:
     VERTEX_CREDS = json.loads(base64.b64decode(encoded_creds).decode("utf-8"))
 
 VERTEX_MODEL_ENDPOINTS = {
+    "llama3-70b": {
+        "type": "model_garden",
+        "endpoint_id": "7522880547475947520",
+        "location": "europe-west2",
+        "params": {"max_output_tokens": 2048},
+    },
+    "llama3-1-70b-instruct": {
+        "type": "model_garden",
+        "endpoint_id": "2546121484254838784",
+        "location": "europe-west2",
+        "params": {"max_output_tokens": 2048},
+    },
     "llama3-8b-chat": {
         "type": "model_garden",
         "endpoint_id": "8290603546454261760",
@@ -100,6 +121,13 @@ VERTEX_MODEL_ENDPOINTS = {
     "mistral-nemo": {
         "type": "vertex_api",
         "model_name": "mistral-nemo@2407",
+        "publisher": "mistralai",
+        "location": "europe-west4",
+        "params": {"max_output_tokens": 2048},
+    },
+    "mistral-large": {
+        "type": "vertex_api",
+        "model_name": "mistral-large@2407",
         "publisher": "mistralai",
         "location": "europe-west4",
         "params": {"max_output_tokens": 2048},

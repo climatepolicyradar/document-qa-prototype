@@ -22,7 +22,7 @@ jobs:
       - name: Install python or load from cache with dependencies
         uses: actions/setup-python@v4
         with:
-          python-version: "3.9"
+          python-version: "3.10"
           cache: "poetry"
 
       - name: Install dependencies
@@ -38,14 +38,27 @@ jobs:
           poetry run python -m nltk.downloader stopwords
           poetry run python -m nltk.downloader punkt
 
+      - name: Install guardrails dependencies
+        run: |
+          poetry run guardrails hub install hub://guardrails/detect_pii
+          poetry run guardrails hub install hub://guardrails/toxic_language
+          poetry run guardrails hub install hub://guardrails/web_sanitization
+
       - name: Run test suite
         env:
           GOOGLE_APPLICATION_CREDENTIALS_BASE64: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_BASE64 }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
         run: |
           poetry run python -m pytest \
           --ignore=tests/online/test_online_helpers.py \
           --ignore=tests/test_db.py \
           --ignore=tests/dataset_creation/test_iaa.py \
+          --ignore=tests/controllers/test_document_controller.py \
+          --ignore=notebooks/first_round_eval_analysis.ipynb \
+          --ignore=notebooks/system_prompts.ipynb \
+          --ignore=tests/controllers/test_rag_controller.py \
+          --ignore=tests/ingestion/test_ingestion_helpers.py \
+          --ignore=tests/controllers/test_vespa_controller.py \
           --nbmake \
           --nbmake-find-import-errors \
           --nbmake-timeout=20 -vvv

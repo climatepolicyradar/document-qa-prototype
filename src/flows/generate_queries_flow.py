@@ -66,12 +66,12 @@ def get_doc_ids_from_s3(
 
 
 @task(log_prints=True)
-def spawn_query_tasks(doc_ids: list[str], tag: str, config: str):
+def spawn_query_tasks(doc_ids: list[str], tag: str, config: str, limit: int = 5):
     logger = get_run_logger()
     for doc_id in doc_ids:
+        generate_queries_for_document.submit(doc_id, tag, config, get_db(), limit=limit)
         logger.info(f"🕐 Sleeping for 5 seconds before processing doc_id: {doc_id}")
         time.sleep(5)
-        generate_queries_for_document.submit(doc_id, tag, config, get_db())
 
 
 #
@@ -89,6 +89,7 @@ def generate_queries_for_document(
     config: str,
     db: Database,
     s3_prefix: str = "project-rag/data/cpr_embeddings_output",
+    limit: int = 5,
 ):
     logger = get_run_logger()
     get_labs_session(set_as_default=True)
@@ -119,7 +120,7 @@ def generate_queries_for_document(
             raise e
 
         logger.info(f"Created {len(queries)} queries")
-        create_queries(quote(queries), quote(db))  # type: ignore
+        create_queries(quote(queries[:limit]), quote(db))  # type: ignore
 
     show_db_stats(db)
 
@@ -141,7 +142,10 @@ def query_control_flow(
 
     doc_ids = get_doc_ids_from_s3()
 
-    spawn_query_tasks(doc_ids[offset : min(offset + limit, len(doc_ids))], tag, config)
+    # This is generating 1 query only at the moment
+    spawn_query_tasks(
+        doc_ids[offset : min(offset + limit, len(doc_ids))], tag, config, 1
+    )
 
 
 if __name__ == "__main__":
@@ -154,15 +158,9 @@ if __name__ == "__main__":
         help="Path to the configuration file",
     )
     parser.add_argument(
-        "--doc_id",
-        type=str,
-        default="CCLW.executive.4840.1833",
-        help="Optionally set a document id",
-    )
-    parser.add_argument(
         "--limit",
         type=int,
-        default=100,
+        default=500,
         help="Limit the number of documents to process",
     )
     parser.add_argument(

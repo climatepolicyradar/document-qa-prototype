@@ -158,7 +158,7 @@ backend/models
 # PyCharm
 .idea/
 
-cpr-genai-209208195b63.json
+cpr-genai-*.json
 *.pem
 
 data/
