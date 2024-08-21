@@ -75,9 +75,9 @@ def get_file_from_s3(
 
 
 @task(log_prints=True)
-def spawn_query_tasks(doc_ids: list[str], tag: str, config: str, limit: int = 5):
+def spawn_query_tasks(doc_ids: list[str], tag: str, config: str):
     for doc_id in doc_ids:
-        generate_queries_for_document.submit(doc_id, tag, config, get_db(), limit=limit)
+        generate_queries_for_document.submit(doc_id, tag, config, get_db())
 
 
 #
@@ -95,7 +95,6 @@ def generate_queries_for_document(
     config: str,
     db: Database,
     s3_prefix: str = "project-rag/data/cpr_embeddings_output",
-    limit: int = 5,
 ):
     logger = get_run_logger()
     get_labs_session(set_as_default=True)
@@ -136,7 +135,7 @@ def generate_queries_for_document(
             raise e
 
         logger.info(f"Created {len(queries)} queries")
-        create_queries(quote(queries[:limit]), quote(db))  # type: ignore
+        create_queries(quote(queries), quote(db))  # type: ignore
 
     show_db_stats(db)
 
@@ -146,7 +145,7 @@ def query_control_flow(
     config: str = "src/configs/experiment_MAIN_QUERIES_1.0.yaml",
     limit: int = 100,
     offset: int = 0,
-    tag: str = "test",
+    tag: str = "main_run_21_08_2024_queries",
 ):
     logger = get_run_logger()
     logger.info(
