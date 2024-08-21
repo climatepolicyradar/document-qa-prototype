@@ -465,6 +465,14 @@ class EndToEndGeneration(BaseModel):
             return self.rag_response.extract_inner_monologue()["answer"]
 
         return self.rag_response.text
+        """Returns the answer from the RAG response. If remove_cot is True, the inner monologue is removed before returning, otherwise the full response is returned."""
+        if self.rag_response is None:
+            return ""
+
+        if remove_cot:
+            return self.rag_response.extract_inner_monologue()["answer"]
+
+        return self.rag_response.text
 
 class Feedback(Model):
     """Represents user feedback for a QAPair."""
@@ -487,16 +495,11 @@ class Feedback(Model):
     @issues_dict.setter
     def issues_dict(self, value):
         self.issues = json.dumps(value)
-        """Returns the answer from the RAG response. If remove_cot is True, the inner monologue is removed before returning, otherwise the full response is returned."""
-        if self.rag_response is None:
-            return ""
 
-        if remove_cot:
-            return self.rag_response.extract_inner_monologue()["answer"]
+    class Meta:
+        database = db
 
-        return self.rag_response.text
-
-    @model_validator(mode="before")
+class EndToEndGeneration(BaseModel):
     @classmethod
     def set_uuid(cls, data: dict) -> dict:
         """Sets the UUID for the query."""
