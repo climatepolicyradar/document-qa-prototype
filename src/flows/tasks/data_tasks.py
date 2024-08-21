@@ -1,6 +1,6 @@
 from prefect import task, get_run_logger, flow
 
-from peewee import Database
+from peewee import Database, fn
 
 from src.controllers.VespaController import VespaController
 from src.models.data_models import EndToEndGeneration, Query, QAPair, DBQuery
@@ -49,36 +49,34 @@ def get_queries(db: Database, tag: str = "test") -> list[Query]:
     return queries
 
 
+def get_query_by_id(db: Database, id: int) -> Query:
+    logger = get_run_logger()
+    query = DBQuery.get_or_none(DBQuery.id == id)
+    logger.info(f"🎲 Got query with id {id}")
+    return query.to_query()
+
+
 def get_unanswered_queries(
-    db: Database,
-    tag: str,
-    query_tag: str,
-    model: str,
-    prompt: str,
-    querstion_prompts: list[str],
+    db: Database, tag: str, query_tag: str, model: str, prompt: str
 ) -> list[Query]:
     logger = get_run_logger()
     logger.info(
         f"Getting unanswered queries for tag {tag} with model {model} and prompt {prompt}"
     )
-    curr_answer_ids = [
-        qa.query_id
-        for qa in QAPair.select()
+    query_models = (
+        QAPair.select(QAPair.query_id)
         .where(QAPair.pipeline_id == tag)
         .where(QAPair.model == model)
         .where(QAPair.prompt == prompt)
-    ]
-
-    logger.info(
-        f"🎲 Got {len(curr_answer_ids)} answers for tag {tag} with model {model} and prompt {prompt}"
+        .distinct()
     )
+
+    logger.info(f"🎲 {query_models} ")
 
     queries = [
         query.to_query()
         for query in DBQuery.select().where(
-            DBQuery.tag == query_tag,
-            DBQuery.id.not_in(curr_answer_ids),
-            DBQuery.prompt.in_(querstion_prompts),
+            DBQuery.tag == query_tag, DBQuery.id.not_in(query_models)
         )
     ]
 
@@ -95,11 +93,15 @@ def get_unanswered_queries(
     timeout_seconds=600,
     tags=["calls_db"],
 )
-def save_answer(tag: str, answer: EndToEndGeneration, db: Database, query: Query):
+def save_answer(
+    tag: str, answer: EndToEndGeneration, db: Database, query: Query
+) -> QAPair:
     logger = get_run_logger()
     logger.info("Saving answer to database...")
     assert query.db_id is not None, "Query database ID is not set!"
-    answer.to_db_model(tag, query_id=str(query.db_id)).save()
+    result = answer.to_db_model(tag, query_id=str(query.db_id))
+    result.save()
+    return result
 
 
 @task(
@@ -116,13 +118,14 @@ def get_answers(db: Database, tag: str) -> list[QAPair]:
     return answers
 
 
-def get_answers_needing_evals(db: Database, tag: str, limit: int = 10) -> list[QAPair]:
+def get_answers_needing_evals(tag: str, limit: int = 10) -> list[QAPair]:
     logger = get_run_logger()
     answers = [
         qa
         for qa in QAPair.select()
         .where(QAPair.pipeline_id == tag)
         .where(QAPair.evals == {})
+        .order_by(fn.Random())
         .limit(limit)
     ]
     logger.info(f"🎲 Got {len(answers)} answers needing evals")

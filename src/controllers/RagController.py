@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 import json
 import random
@@ -9,7 +10,7 @@ from langchain_core.messages.base import BaseMessage
 from langchain_core.language_models.base import BaseLanguageModel
 from src.controllers.VespaController import VespaController
 from src.controllers.ObservabilityManager import ObservabilityManager
-
+from fastapi import WebSocket
 from src.logger import get_logger
 from src.models.data_models import (
     AssertionModel,
@@ -19,13 +20,14 @@ from src.models.data_models import (
     RAGRequest,
     RAGResponse,
 )
-from src.online.inference import get_llm
+from src.online.inference import LLMTypes, get_llm
 from src.dataset_creation.query_utils import (
     render_document_text_for_llm,
     sanitise_response_text,
 )
+import re
 
-from src.online.pipeline import rag_chain
+from src.online.pipeline import rag_chain, streamable_rag_chain
 from src import config
 
 
@@ -86,7 +88,7 @@ class RagController:
         llm = self.get_llm(scenario.generation_engine, scenario.model)
         prompt = scenario.prompt.prompt_content.render(prompt_data)
 
-        LOGGER.info(f"🤔 Running {scenario.model} and prompt: {prompt}")
+        LOGGER.info(f"🤔 Running {scenario.model}")
 
         if self.observe:
             result = llm.invoke(
@@ -173,7 +175,9 @@ class RagController:
 
         rag_chain_with_source = rag_chain(
             llm=llm,
-            retriever=self.vespa.retriever(scenario.document.document_id),  # type: ignore
+            retriever=self.vespa.retriever(
+                scenario.document.document_id, scenario.top_k_retrieval_results or 6
+            ),  # type: ignore
             citation_template=scenario.prompt.make_qa_prompt(),
             scenario=scenario,
         )
@@ -193,6 +197,13 @@ class RagController:
         duration = end_time - start_time
         LOGGER.info(f"Duration: {duration}")
 
+        metadata = {}
+        try:
+            metadata["assertions"] = self.extract_assertions_from_answer(response_text)
+        except Exception as e:
+            LOGGER.error(f"Error extracting assertions: {e}")
+            metadata["errors"] = ["Could not extract assertions"]
+
         response = EndToEndGeneration(
             config=scenario.get_config(),
             rag_request=RAGRequest.from_scenario(query, scenario),
@@ -200,10 +211,109 @@ class RagController:
                 text=response_text,
                 retrieved_documents=[d.dict() for d in response["documents"]],
                 query=query,
+                metadata=metadata,
             ),
         )
 
         return response
+
+    async def stream_rag_pipeline(
+        self, query: str, scenario: Scenario, websocket: WebSocket
+    ):
+        """
+        Stream the RAG pipeline for a given query and scenario.
+
+        This is a streaming RAG pipeline that sends the RAG response to the client in chunks.
+        """
+        LOGGER.info(f"***STREAMING RAG - query = `{query}`***")
+
+        assert scenario.document is not None, "Scenario must have a document"
+
+        start_time = datetime.now()
+
+        LOGGER.info(f"🤔 Running generation engine: {scenario.generation_engine}")
+        LOGGER.info(f"🤔 Running model: {scenario.model}")
+
+        llm = self.get_llm(scenario.generation_engine, scenario.model)
+
+        LOGGER.info(f"🤔 Running document: {scenario.document.document_id}")
+
+        rag_chain_with_source = streamable_rag_chain(
+            llm=llm,
+            retriever=self.vespa.retriever(
+                scenario.document.document_id, scenario.top_k_retrieval_results or 6
+            ),  # type: ignore
+            citation_template=scenario.prompt.make_qa_prompt(),
+            scenario=scenario,
+        )
+
+        response_text = ""
+        documents = []
+        for event in rag_chain_with_source.stream(
+            {
+                "query_str": query,
+                "document_id": scenario.document.document_id,
+                "document_metadata_context_str": f"'{scenario.document.document_name}' pub. {scenario.document.document_metadata.publication_ts} (country:{scenario.document.document_metadata.geography})",
+            }
+        ):
+            print(event, flush=True)
+
+            await websocket.send_text(event.strip())
+            await asyncio.sleep(0)  # Yield control back to the event loop
+
+            response_text += event
+
+        LOGGER.info(f"Response: {response_text}")
+
+        end_time = datetime.now()
+        duration = end_time - start_time
+        LOGGER.info(f"Duration: {duration}")
+
+        metadata = {}
+        try:
+            metadata["assertions"] = self.extract_assertions_from_answer(response_text)
+        except Exception as e:
+            LOGGER.error(f"Error extracting assertions: {e}")
+            metadata["errors"] = ["Could not extract assertions"]
+
+        response = EndToEndGeneration(
+            config=scenario.get_config(),
+            rag_request=RAGRequest.from_scenario(query, scenario),
+            rag_response=RAGResponse(
+                text=response_text,
+                retrieved_documents=[d.dict() for d in documents],
+                query=query,
+                metadata=metadata,
+            ),
+        )
+
+        return response
+
+    def execute_no_answer_flow(self, result: EndToEndGeneration) -> EndToEndGeneration:
+        """Used to generate the information for no answer flows"""
+
+        LOGGER.info(
+            f"🔍 System did not respond to the user query: {result.rag_request.query}: {result.get_answer()}"
+        )
+        scenario = Scenario(
+            prompt=Prompt.from_template("response/summarise_simple"),
+            model="mistral-nemo",
+            generation_engine=LLMTypes.VERTEX_AI.value,
+        )
+
+        if result.rag_response is None:
+            raise ValueError("RAG response is None")
+
+        summary = self.run_llm(
+            scenario, {"query_str": result.rag_response.retrieved_passages_as_string()}
+        )
+
+        LOGGER.info(f"🔍 System summarised the query: {summary}")
+        result.rag_response.add_metadata("no_answer_summary", summary)
+        result.rag_response.add_metadata(
+            "no_answer_assertions", self.extract_assertions_from_answer(summary)
+        )
+        return result
 
     def extract_assertions_from_answer(
         self,
@@ -213,29 +323,33 @@ class RagController:
         assertions = self._extract_assertions(answer)
         return assertions
 
-    def highlight_key_quotes(
+    async def highlight_key_quotes(
         self,
-        scenario: Scenario,
         query: str,
         assertion: AssertionModel,
-        context_str: str,
+        retrieved_documents: list[dict],
     ) -> str:
-        """Highlight the key quotes in the given assertion."""
+        """
+        Highlight the key quotes in the given assertion.
+
+        Assumes that the given assertion model has only one citation. pre-process using .to_atomic_assertions if that is not the case.
+        """
         highlight_prompt_key = "response/extract_key_quotes"
 
         highlight_scenario = Scenario(
-            model=scenario.model,
-            generation_engine=scenario.generation_engine,
+            model="mistral-nemo",
+            generation_engine="vertexai",
             prompt=Prompt.from_template(highlight_prompt_key),
         )
         args = {
             "query_str": query,
             "assertion": assertion.assertion,
-            "cited_sources": assertion.citations_as_string(),
-            "context_str": context_str,
+            "context_str": retrieved_documents[int(assertion.citations[0]) - 1][
+                "page_content"
+            ],
         }
 
-        LOGGER.info(f"🔍 Running highlight scenario with args: {args}")
+        LOGGER.info(f"🔍 Running {assertion} highlight scenario with args: {args}")
         highlight_text = self.run_llm(highlight_scenario, args)
         LOGGER.info(f"🔍 Highlighted text: {highlight_text}")
         return highlight_text
@@ -245,17 +359,28 @@ class RagController:
         assert isinstance(rag_answer, str), "RAG answer must be a string"
 
         assertions = []
-        lines = rag_answer.split("\n")
 
-        for line in lines:
-            if line.startswith("- "):
-                parts = line[2:].split(" [")
-                assertion = parts[0].strip()
-                citations = [f"[{citation.strip()}" for citation in parts[1:]]
-                assertion_model = AssertionModel(
-                    assertion=assertion, citations=citations
-                )
-                assertions.append(assertion_model)
+        pattern = r"(.*?)\s*\[([\d,\s]+)\]"  # Looking for [x], [x,y], [x,y,z] etc
+        matches = re.findall(pattern, rag_answer)
+
+        results = []
+        for sentence, citations in matches:
+            citation_numbers = [c.strip() for c in citations.split(",")]
+            results.append((sentence.strip(), citation_numbers))
+
+        LOGGER.info(f"🔍 Extracted {len(results)} sentences with citations")
+
+        # extracted_sentences = extract_sentences_with_citations(rag_answer)
+        # LOGGER.debug(f"🔢 Extracted sentences: {extracted_sentences}")
+
+        assert len(results) > 0, "No sentences with citations found"
+
+        for line in results:
+            print(line)
+            assertion = line[0]
+            citations = line[1]
+            assertion_model = AssertionModel(assertion=assertion, citations=citations)
+            assertions.append(assertion_model)
 
         LOGGER.info(f"📝 Extracted assertions: {assertions}")
         return assertions

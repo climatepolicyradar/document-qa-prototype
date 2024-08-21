@@ -1,4 +1,7 @@
-from fastapi import FastAPI
+import asyncio
+import json
+from anyio import Path
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from langchain.globals import set_verbose, set_debug
@@ -8,10 +11,13 @@ from src.controllers.EvaluationController import EvaluationController
 from src.controllers.RagController import RagController
 from src.controllers.ScenarioController import ScenarioController
 from cpr_data_access.models import BaseDocument
-
 from src.logger import get_logger
 from src.models.data_models import RAGRequest
 from src.online.inference import LLMTypes
+from src import config
+from src.models.data_models import QAPair
+
+config.logger.info("Here we go yo")  # I just want ruff to stop removing my import.
 
 LOGGER = get_logger(__name__)
 DEBUG = False
@@ -24,6 +30,7 @@ else:
 
 dc = DocumentController()
 ec = EvaluationController()
+api_config = "src/configs/answer_config.yaml"
 app_context = dict()
 
 
@@ -61,7 +68,7 @@ app.add_middleware(
 LOGGER.info("App and context created")
 
 
-@app.get("/health")
+@app.get("/")
 async def get_health():
     """
     Get application health.
@@ -81,7 +88,6 @@ def do_rag(request: RAGRequest) -> dict:
     :param str document_id: The document ID
     :return dict: RAG result
     """
-    api_config = "src/configs/answer_config.yaml"
 
     assert request.query is not None, "Query is required"
     assert request.document_id is not None, "Document ID is required"
@@ -96,15 +102,24 @@ def do_rag(request: RAGRequest) -> dict:
     request.model = config_sc.model
     request.generation_engine = LLMTypes(config_sc.generation_engine)
 
-    return (
-        app_context["rag_controller"]
-        .run_rag_pipeline(query=request.query, scenario=request.as_scenario(dc))
-        .model_dump()
+    result = app_context["rag_controller"].run_rag_pipeline(
+        query=request.query, scenario=request.as_scenario(dc)
     )
+
+    result.rag_response.metadata["responded"] = result.rag_response.refused_answer()
+
+    if result.rag_response.refused_answer():
+        result = app_context["rag_controller"].execute_no_answer_flow(result)
+
+    db_save = QAPair.from_end_to_end_generation(result, "prototype")
+    db_save.save()
+
+    return_json = result.model_dump()
+    return return_json
 
 
 @app.get("/document/{document_id}")
-def get_document(document_id: str) -> BaseDocument:
+def get_document_data(document_id: str) -> BaseDocument:
     """
     Get a document by ID.
 
@@ -114,23 +129,120 @@ def get_document(document_id: str) -> BaseDocument:
     return dc.create_base_document(document_id)
 
 
-@app.get("/document_ids")
-def get_document_ids():
-    """
-    Get unique document IDs from the vector store.
+@app.get("/documents")
+def get_documents():
+    """Returns documents and their metadata available for the tool"""
+    metadata_path = Path("data/document_metadata.json")
+    with open(metadata_path, "r") as f:
+        metadata = json.load(f)
+    return metadata
 
-    This function retrieves and returns a list of all unique document IDs
-    available in the vector store for RAG processing.
 
-    :return list: list of document IDs
-    """
+@app.get("/documents/{document_id}")
+def get_document(document_id: str):
+    """Returns a document and its metadata available for the tool"""
+    metadata_path = Path("data/document_metadata.json")
+    with open(metadata_path, "r") as f:
+        metadata = json.load(f)
+    return [d for d in metadata if d["id"] == document_id][0]
 
-    ## TODO I feel maybe this array mangling should be in get_available_documents but need to look at the JSON deeper to see if there's other information we may want to not lose
-    return {
-        "document_ids": [
-            leaf["value"]
-            for leaf in app_context["rag_controller"].get_available_documents()["root"][
-                "children"
-            ]["children"]["children"]
-        ]
-    }
+
+@app.websocket("/ws/stream_rag/")
+async def stream_rag(websocket: WebSocket):
+    """Stream RAG (Retrieval-Augmented Generation) on a document."""
+    await websocket.accept()
+    await websocket.send_json({"type": "ai", "content": "Connected to RAG stream"})
+    input_data = await websocket.receive_json()
+    request = RAGRequest(**input_data)
+
+    try:
+        # messy messy messy
+        sc = ScenarioController.from_config(api_config)
+        config_sc = sc.scenarios[
+            0
+        ]  # TODO - this is how we A/B Test! Pick scenarios from config
+        request.prompt_template = config_sc.prompt.prompt_template
+        request.model = config_sc.model
+        request.generation_engine = LLMTypes(config_sc.generation_engine)
+
+        current_sc = request.as_scenario(dc)
+
+        result = await app_context["rag_controller"].stream_rag_pipeline(
+            query=request.query, scenario=current_sc, websocket=websocket
+        )
+
+        await websocket.send_json({"type": "final", "result": result.model_dump()})
+        # await websocket.send_json({'type': 'final', 'result': {'answer': 'test'}})
+    except WebSocketDisconnect:
+        await websocket.close()
+
+
+@app.post("/highlights/{source_id}")
+async def get_highlights(source_id: str):
+    """Get highlights from a document."""
+    qa_pair = QAPair.get_by_source_id(source_id)
+    gen_model = qa_pair.to_end_to_end_generation()
+
+    assert gen_model.rag_response is not None, "RAG response is None"
+
+    assertions = app_context["rag_controller"].extract_assertions_from_answer(
+        gen_model.get_answer()
+    )
+
+    LOGGER.info(gen_model.rag_request.query)
+    LOGGER.info(gen_model.rag_request.document_id)
+
+    async def process_assertion(assertion):
+        return {
+            "citations": assertion.citations,
+            "answerSubstring": assertion.assertion,
+            "uuid": assertion.uuid,
+            "citationSubstring": await app_context[
+                "rag_controller"
+            ].highlight_key_quotes(
+                gen_model.rag_request.query,
+                assertion,
+                gen_model.rag_response.retrieved_documents,  # type: ignore
+            ),
+        }
+
+    LOGGER.info("🚀 Launching parallel highlight processing")
+    all_assertions = [
+        atomic
+        for assertion in assertions
+        for atomic in assertion.to_atomic_assertions()
+    ]
+
+    highlights = await asyncio.gather(
+        *[process_assertion(assertion) for assertion in all_assertions]
+    )
+
+    LOGGER.info("🧠 Consolidating highlights by UUID")
+    consolidated_highlights = {}
+    for highlight in highlights:
+        uuid = highlight["uuid"]
+        if uuid not in consolidated_highlights:
+            consolidated_highlights[uuid] = {
+                "answerSubstring": highlight["answerSubstring"],
+                "citationSubstrings": {},
+            }
+        consolidated_highlights[uuid]["citationSubstrings"][
+            highlight["citations"][0]
+        ] = highlight["citationSubstring"]
+
+    highlights = list(consolidated_highlights.values())
+    LOGGER.info(f"🎭 Consolidated {len(highlights)} unique assertions")
+    LOGGER.info(f"✅ Processed {len(highlights)} highlights in parallel")
+
+    return highlights
+
+
+@app.post("/evaluate/{source_id}")
+async def evaluate(source_id: str):
+    """Evaluate an answer."""
+    qa_pair = QAPair.get_by_source_id(source_id)
+    gen_model = qa_pair.to_end_to_end_generation()
+
+    evals = await ec.evaluate_async(gen_model)
+    print(evals)
+    return evals

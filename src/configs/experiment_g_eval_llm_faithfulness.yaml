@@ -1,16 +1,12 @@
 models:
   - generation_engine: vertexai
-    model: llama3-1-70b-instruct
-  - generation_engine: vertexai
-    model: mistral-nemo
-  - generation_engine: vertexai
-    model: llama3-8b-chat
+    model: climate-gpt-7b
 model_selection: all
 prompt_templates:
-  - prompt_template: response/test_response
+  - prompt_template: evals-answers-0.0.1/basic_answer
 template_selection: all
 retrieval:
   - retrieval_window: 1
-    top_k: 3
+    top_k: 6
 retrieval_selection: random
 documents_per_query: 1 # set this to 1 if the query file contains document ids

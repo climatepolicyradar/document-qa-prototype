@@ -1,5 +1,7 @@
+import asyncio
 import catalogue
 import importlib
+import json
 
 from pathlib import Path
 from typing import Optional
@@ -33,6 +35,10 @@ class EvaluationController:
             self.get_evaluator("vectara"),
         ]  # The registry doesn't instantiate the evaluators properly, so load them separately
 
+    def set_evaluators(self, evals: list[str]):
+        """Set a custom set of evaluators to use"""
+        self.instantiated = [self.get_evaluator(e) for e in evals]
+
     def get_all_evaluators(self):
         """Retrieve all registered evaluators."""
         return self.instantiated
@@ -53,7 +59,7 @@ class EvaluationController:
 
         if evaluator not in self.evaluators:
             for path in Path("src/evaluation").rglob("*.py"):
-                if path.stem.strip() == evaluator.strip():
+                if path.stem.strip() == evaluator:
                     try:
                         _ = importlib.import_module(
                             f".{path.stem}", f"src.evaluation.{path.parent.stem}"
@@ -88,6 +94,10 @@ class EvaluationController:
         eval_inst = self.get_evaluator(evaluator, eval_kwargs)
         return eval_inst.evaluate(result)
 
+    def evaluate_system_response(self, result: EndToEndGeneration):
+        """Evaluate the system response."""
+        return self.evaluate(result, "system_response")
+
     def evaluate_all(self, result: EndToEndGeneration):
         """
         Evaluate the given result using all instantiated evaluators.
@@ -101,3 +111,42 @@ class EvaluationController:
         eval: MultiAxisEvaluator = MultiAxisEvaluator(self.instantiated)
 
         return eval.evaluate(result)
+
+    async def evaluate_async(self, result: EndToEndGeneration):
+        """Evaluate the given result using all instantiated evaluators in parallel. Coupled to API usage. Needs a good refactor really."""
+        if result is None or result.rag_response is None:
+            LOGGER.warning("Result is None, skipping evaluation")
+            return None
+
+        async def process_eval_async(gen: EndToEndGeneration, evaluator: str):
+            result = self.evaluate(gen, evaluator)
+            if result is not None:
+                return json.dumps(result.model_dump())
+            else:
+                return None
+
+        # need to dump to string for gather to work
+        result = await asyncio.gather(
+            *[
+                process_eval_async(result, evaluator)
+                for evaluator in [
+                    "formatting",
+                    "g_eval_policy",
+                    "g_eval_faithfulness",
+                    "system_response",
+                    "patronus_lynx",
+                    "vectara",
+                ]
+            ]  # type: ignore
+        )
+        filtered_results = [r for r in result if r is not None]
+        result = [json.loads(r) for r in filtered_results]  # type: ignore
+        return result
+
+    def did_system_respond(self, result: EndToEndGeneration):
+        """Check if the system responded to the user query."""
+        sys_eval = self.get_evaluator("system_response")
+        eval_result = sys_eval.evaluate(result)
+        if eval_result.score == 0:
+            return False
+        return True

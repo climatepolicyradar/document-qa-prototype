@@ -25,6 +25,10 @@ class Formatting(Evaluator):
     TYPE = "formatting"
     NAME = "rule_based"
 
+    def get_success(self, score: float) -> bool:
+        """Returns whether the score is a success for this evaluator"""
+        return score == 1
+
     def evaluate(self, generation: EndToEndGeneration) -> Score:
         """Evaluate whether the system followed the formatting guidelines"""
         self._validate_generation(generation)
@@ -66,6 +70,7 @@ class Formatting(Evaluator):
 
         return Score(
             score=int(well_formatted),  # type: ignore
+            success=self.get_success(int(well_formatted)),
             type=self.TYPE,
             name=self.NAME,
             gen_uuid=generation.uuid,  # type: ignore

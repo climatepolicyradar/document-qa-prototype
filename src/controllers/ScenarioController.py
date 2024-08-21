@@ -77,7 +77,6 @@ class ScenarioController:
     def from_config_dict(cls, config: dict) -> "ScenarioController":  # type: ignore
         """Load a set of scenarios from a config file"""
         cls.config = config
-        LOGGER.info(cls.config)
 
         model_options = cls._create_options(
             cls, cls.config["models"], SelectionStrategy(cls.config["model_selection"])
@@ -108,9 +107,6 @@ class ScenarioController:
                 for model, template in all_options
                 for retrieval in retrieval_options
             ]
-
-        LOGGER.info(f"🤖 Created {len(all_options)} scenarios from config")
-        LOGGER.info(f"🤖 Scenarios: {all_options}")
 
         cls._load_template_map(cls)  # type: ignore
 
@@ -177,9 +173,8 @@ class ScenarioController:
             else config.root.parent / self.config["seed_queries_path"]
         )
         print(f"🤖 Loading seed queries from {seed_queries_path}")
-        _open = self._get_file_opener(seed_queries_path)
 
-        with _open(seed_queries_path) as f:
+        with open(seed_queries_path) as f:
             seed_queries: list[Query] = [
                 Query(**json.loads(line)) for line in f.readlines() if line
             ]
@@ -188,6 +183,7 @@ class ScenarioController:
         return seed_queries
 
     def _get_file_opener(self, file_path: str):
+        # TODO s3fs was seriously bugging. Needs reworking. Using local file for now.
         if file_path.startswith("s3://"):
             labs_key = json.loads(get_secret("LABS_CREDS"))
 

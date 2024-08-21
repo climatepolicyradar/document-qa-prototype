@@ -27,6 +27,10 @@ class PatronusLynx(Evaluator):
             config.evaluation_templates_folder / "patronus_lynx.txt"
         )
 
+    def get_success(self, score: float) -> bool:
+        """Returns whether the score is a success for this evaluator"""
+        return score == 1
+
     def evaluate(
         self, generation: EndToEndGeneration, prompt: Optional[str] = None
     ) -> Optional[Score]:
@@ -45,6 +49,7 @@ class PatronusLynx(Evaluator):
 
         return Score(
             score=1 if result["SCORE"] == "PASS" else 0,
+            success=self.get_success(1 if result["SCORE"] == "PASS" else 0),
             type=self.TYPE,
             name=self.NAME,
             gen_uuid=generation.uuid or "",

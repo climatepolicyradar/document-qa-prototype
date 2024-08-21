@@ -83,13 +83,10 @@ def get_secret(key: str) -> str:
 
 # This is a temp hack while platform team is having good work/life balanece
 def get_labs_session(set_as_default: bool = False) -> boto3.Session:
-    aws_credentials_block = AwsCredentials.load("aws-credentials-block-labs")
+    if aws_credentials_block is None:
+        raise ValueError("AWS credentials block is None")
 
-    session = boto3.Session(
-        aws_access_key_id=aws_credentials_block.aws_access_key_id,
-        aws_secret_access_key=aws_credentials_block.aws_secret_access_key,
-        region_name="eu-west-1",
-    )
+    session = aws_credentials_block.get_boto3_session()
 
     if set_as_default:
         boto3.setup_default_session(

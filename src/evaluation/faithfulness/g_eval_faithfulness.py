@@ -31,3 +31,7 @@ class GEvalFaithfulness(GEval):
             question=generation.rag_request.query,
             answer=generation.get_answer(),  # type: ignore
         )
+
+    def get_success(self, score: float) -> bool:
+        """Returns whether the score is a success for this evaluator"""
+        return score >= 0.8

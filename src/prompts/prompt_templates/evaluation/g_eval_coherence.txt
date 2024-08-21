@@ -19,9 +19,6 @@ Evaluation Steps:
 - Output ONLY the score as a number. 
 - The output should pass an is_digit() check.
 
-
-Example:
-
 Source Text: 
 
 {{sources}}
