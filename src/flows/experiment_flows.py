@@ -25,7 +25,7 @@ def create_gpt4_evals_flow(tag: str = "g_eval_comparison_experiment", limit: int
     # Get answers for this run with no gpt-4o eval
     answers = (
         QAPair.select()
-        .where(QAPair.evals.has_key("g_eval_faithfulness_gpt4o") is False)
+        .where(QAPair.evals.has_key("g_eval_faithfulness_gpt4o") == False)  # noqa: E712
         .where(QAPair.pipeline_id == tag)
         .order_by(fn.Random())
         .limit(limit)
