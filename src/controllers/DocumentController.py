@@ -8,17 +8,26 @@ logger = logging.getLogger(__name__)
 
 
 class DocumentController:
-    """Controller for document operations"""
+    """Controller for handling documents."""
 
     def __init__(self):
         def load_metadata() -> pd.DataFrame:
             """Load document metadata from a CSV file."""
             csv_path = Path("data/docs_metadata.csv")
-            assert csv_path.exists(), "📄 CSV file does not exist"
+            if not csv_path.exists():
+                logger.error("📄 CSV file does not exist")
+                return pd.DataFrame([])
+
             logger.info("📄 Loading document metadata from CSV")
             return pd.read_csv(csv_path)
 
         self.metadata_df = load_metadata()
+
+    def get_metadata(self, document_id: str) -> dict:
+        """Get metadata for a document."""
+        return self.metadata_df[
+            self.metadata_df["Internal Document ID"] == document_id
+        ].to_dict("records")[0]
 
     def create_base_document(self, document_id: str) -> BaseDocument:
         """

@@ -97,12 +97,12 @@ class VespaController:
             )
         return response.json
 
-    def retriever(self, document_id: str) -> "VespaRetriever":
+    def retriever(self, document_id: str, top_k: int = 6) -> "VespaRetriever":
         """Returns CPR's VespaRetriever for a chain"""
         yql = f"select text_block_id, text_block, text_block_window from sources document_passage where userQuery() and (document_import_id in ('{document_id}'))"
         # yql = f"select text_block_id, text_block, text_block_window from sources document_passage where userQuery() and (document_import_id in ('{document_id}'))"
 
-        vespa_query_body = {"yql": yql, "hits": 100}
+        vespa_query_body = {"yql": yql, "hits": top_k}
 
         ## TODO should content field be text_block_window or text_block?
         return CPRVespaRetriever(
@@ -137,6 +137,7 @@ class CPRVespaRetriever(VespaRetriever):
         response = vc.query(
             query=body["query"]["query_str"],
             document_id=body["query"]["document_id"],
+            hits=body["hits"],
         )
 
         root = response["root"]

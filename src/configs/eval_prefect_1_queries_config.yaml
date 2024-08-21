@@ -1,40 +1,23 @@
 models:
   - generation_engine: gemini
-    model: gemini-1.5-pro
-  - generation_engine: gemini
     model: gemini-1.5-flash
 model_selection: all
 prompt_templates:
   - prompt_template: evals-0.0.1/queries-ambiguous
-  - prompt_template: evals-0.0.1/queries-bias
   - prompt_template: evals-0.0.1/queries-bias-equity-risk
   - prompt_template: evals-0.0.1/queries-climate-controversy
-  - prompt_template: evals-0.0.1/queries-complex
   - prompt_template: evals-0.0.1/queries-controversial
-  - prompt_template: evals-0.0.1/queries-esl
   - prompt_template: evals-0.0.1/queries-factual-errors
   - prompt_template: evals-0.0.1/queries-harmful
   - prompt_template: evals-0.0.1/queries-indigenous
-  - prompt_template: evals-0.0.1/queries-inference
-  - prompt_template: evals-0.0.1/queries-jailbreak
   - prompt_template: evals-0.0.1/queries-long
-  - prompt_template: evals-0.0.1/queries-no-answer
-  - prompt_template: evals-0.0.1/queries-nonsense
   - prompt_template: evals-0.0.1/queries-normal
-  - prompt_template: evals-0.0.1/queries-numerical
-  - prompt_template: evals-0.0.1/queries-opinions
-  - prompt_template: evals-0.0.1/queries-partial-answer
-  - prompt_template: evals-0.0.1/queries-pii
-  - prompt_template: evals-0.0.1/queries-policy-violation
   - prompt_template: evals-0.0.1/queries-search-terms
   - prompt_template: evals-0.0.1/queries-sections
   - prompt_template: evals-0.0.1/queries-speculative
-  - prompt_template: evals-0.0.1/queries-summaries
-  - prompt_template: evals-0.0.1/queries-system-prompt
   - prompt_template: evals-0.0.1/queries-typo
-  - prompt_template: evals-0.0.1/queries-violate-policy
 template_selection: all
-seed_queries_path: s3://project-rag/data/queries/seed_samples.jsonl
+seed_queries_path: data/seed_samples.jsonl
 retrieval:
   - retrieval_window: 1
     top_k: 6

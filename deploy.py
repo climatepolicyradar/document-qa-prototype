@@ -1,5 +1,5 @@
 import sys
-from src.flows.generate_evals_flow import generate_evals_flow
+from src.flows.experiment_flows import process_faithfulness_experiment_answer_job
 import dotenv
 import os
 from prefect.blocks.system import JSON
@@ -12,7 +12,8 @@ DEFAULT_JOB_VARIABLES["cpu"] = 1024
 DEFAULT_JOB_VARIABLES["memory"] = 4096
 DOCKER_REGISTRY = os.getenv("DOCKER_REGISTRY")
 
-all_flows = [generate_evals_flow]
+# Add flows here to deploy
+all_flows = [process_faithfulness_experiment_answer_job]
 
 base_image = DeploymentImage(
     name=f"{DOCKER_REGISTRY}/prefect-rag-labs",

@@ -19,6 +19,10 @@ class SystemResponse(Evaluator):
             "I cannot provide an answer",
         }
 
+    def get_success(self, score: float) -> bool:
+        """Returns whether the score is a success for this evaluator"""
+        return score == 1
+
     def evaluate(self, generation: EndToEndGeneration) -> Score:
         """
         Evaluate whether the system responded.
@@ -53,6 +57,7 @@ class SystemResponse(Evaluator):
                 # negation term here, but the risk of FPs seems low.
                 return Score(
                     score=0.5,
+                    success=self.get_success(0.5),
                     type=self.TYPE,
                     name=self.NAME,
                     gen_uuid=generation.uuid,  # type: ignore
@@ -60,6 +65,7 @@ class SystemResponse(Evaluator):
             else:
                 return Score(
                     score=0,
+                    success=self.get_success(0),
                     type=self.TYPE,
                     name=self.NAME,
                     gen_uuid=generation.uuid,  # type: ignore
@@ -67,6 +73,7 @@ class SystemResponse(Evaluator):
 
         return Score(
             score=1,  # type: ignore
+            success=self.get_success(1),
             type=self.TYPE,
             name=self.NAME,
             gen_uuid=generation.uuid,  # type: ignore

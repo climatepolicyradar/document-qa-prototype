@@ -1,43 +1,41 @@
+from src.controllers.RagController import RagController
+from src.evaluation.g_eval import GEval
 from src.models.data_models import EndToEndGeneration
-from typing import Optional
 from src.prompts.template_building import jinja_template_loader
 from src.controllers.EvaluationController import evaluators
-from src.evaluation.g_eval import GEval
 from src.logger import get_logger
 
+
 import src.config as config
+
 
 LOGGER = get_logger(__name__)
 
 
-@evaluators.register("g_eval_policy")
-class GEvalPolicy(GEval):
-    """G-Eval for policy aligment"""
+@evaluators.register("g_eval_faithfulness_llama3")
+class GEvalFaithfulness(GEval):
+    """G-Eval for Faithfulness"""
 
-    TYPE = "cpr-generation-policy"
+    TYPE = "faithfulness_llama3"
     NAME = "g_eval"
 
-    def __init__(self, *args, name: Optional[str] = None):
+    def __init__(self, *args):
         super().__init__(*args)
-        self.policy = (
-            config.policy_templates_folder / "cpr_generation_policy_general.txt"
-        ).read_text()
+
+        self.model = RagController().get_llm("vertexai", "llama3-1-70b-instruct")
         self.template = jinja_template_loader(
-            config.evaluation_templates_folder
-            / "cpr-generation-policy/g_eval_violation_v5.txt"
+            config.evaluation_templates_folder / "g_eval_faithfulness.txt"
         )
-        if name is not None:
-            self.NAME = name
 
     def get_prompt(self, generation: EndToEndGeneration) -> str:
         """Returns the prompt for the evaluator"""
-        return self.template.render(
-            policy=self.policy,
+        result = self.template.render(
             sources=generation.rag_response.retrieved_passages_as_string(),  # type: ignore
             question=generation.rag_request.query,
             answer=generation.get_answer(),  # type: ignore
         )
+        return result
 
     def get_success(self, score: float) -> bool:
         """Returns whether the score is a success for this evaluator"""
-        return score <= 0.2
+        return score >= 0.8

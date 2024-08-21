@@ -20,7 +20,10 @@ run_streamlit_demo:
 run_streamlit_analysis:
 	poetry run python -m streamlit run ./src/streamlit/qa_review_app.py
 
-build_api: export_env_vars
+make_document_metadata:
+	poetry run python -m src.scripts.generate_document_data
+
+build_api: export_env_vars make_document_metadata
 	docker build -t document-qa-api -f docker/Dockerfile.api .
 
 run_api:
