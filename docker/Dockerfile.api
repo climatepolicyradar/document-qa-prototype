@@ -11,6 +11,9 @@ RUN pip install --no-cache poetry
 COPY pyproject.toml ./
 RUN poetry config virtualenvs.create false
 RUN poetry install --no-interaction --no-root
+RUN poetry run guardrails hub install hub://guardrails/detect_pii
+RUN poetry run guardrails hub install hub://guardrails/toxic_language
+RUN poetry run guardrails hub install hub://guardrails/web_sanitization
 
 # Copy files to image
 COPY data ./data

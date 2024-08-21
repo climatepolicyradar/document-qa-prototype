@@ -6,6 +6,11 @@ install:
 	poetry run pre-commit install
 	poetry run ipython kernel install --user
 
+install_guardrails:
+	guardrails hub install hub://guardrails/detect_pii
+	guardrails hub install hub://guardrails/toxic_language
+	guardrails hub install hub://guardrails/web_sanitization
+
 test:
 	poetry run python -m pytest -vvv
 
