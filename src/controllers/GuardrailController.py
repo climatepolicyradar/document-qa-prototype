@@ -27,7 +27,7 @@ class GuardrailController:
         self,
         guardrail_types: list[GuardrailType] = [
             GuardrailType.TOXICITY,
-            # GuardrailType.PII, # FIXME: this guardrail has a JsonDecodeError at the moment
+            GuardrailType.PII,
             GuardrailType.WEB_SANITIZATION,
         ],
     ):
