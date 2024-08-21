@@ -457,6 +457,14 @@ class EndToEndGeneration(BaseModel):
         )
 
     def get_answer(self, remove_cot: bool = True) -> str:
+        """Returns the answer from the RAG response. If remove_cot is True, the inner monologue is removed before returning, otherwise the full response is returned."""
+        if self.rag_response is None:
+            return ""
+
+        if remove_cot:
+            return self.rag_response.extract_inner_monologue()["answer"]
+
+        return self.rag_response.text
 
 class Feedback(Model):
     """Represents user feedback for a QAPair."""
