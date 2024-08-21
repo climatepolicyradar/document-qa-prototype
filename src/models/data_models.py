@@ -455,6 +455,28 @@ class EndToEndGeneration(BaseModel):
         )
 
     def get_answer(self, remove_cot: bool = True) -> str:
+
+class Feedback(Model):
+    """Represents user feedback for a QAPair."""
+    id = AutoField()
+    qapair = ForeignKeyField(QAPair, backref='feedbacks')
+    approve = BooleanField(null=True)
+    issues = TextField(null=True)
+    comments = TextField(null=True)
+    created_at = DateTimeField(default=datetime.datetime.now)
+    updated_at = DateTimeField(default=datetime.datetime.now)
+
+    def save(self, *args, **kwargs):
+        self.updated_at = datetime.datetime.now()
+        return super(Feedback, self).save(*args, **kwargs)
+
+    @property
+    def issues_dict(self):
+        return json.loads(self.issues) if self.issues else {}
+
+    @issues_dict.setter
+    def issues_dict(self, value):
+        self.issues = json.dumps(value)
         """Returns the answer from the RAG response. If remove_cot is True, the inner monologue is removed before returning, otherwise the full response is returned."""
         if self.rag_response is None:
             return ""
