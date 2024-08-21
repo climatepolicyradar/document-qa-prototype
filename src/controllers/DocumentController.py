@@ -14,7 +14,10 @@ class DocumentController:
         def load_metadata() -> pd.DataFrame:
             """Load document metadata from a CSV file."""
             csv_path = Path("data/docs_metadata.csv")
-            assert csv_path.exists(), "📄 CSV file does not exist"
+            if not csv_path.exists():
+                logger.error("📄 CSV file does not exist")
+                return pd.DataFrame([])
+
             logger.info("📄 Loading document metadata from CSV")
             return pd.read_csv(csv_path)
 
