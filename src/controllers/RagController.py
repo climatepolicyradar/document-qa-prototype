@@ -185,6 +185,7 @@ class RagController:
         assert scenario.document is not None, "Scenario must have a document"
 
         output_metadata = {}
+        output_metadata["guardrails"] = {}
         start_time = datetime.now()
 
         LOGGER.info("Running guardrails on query")
@@ -200,7 +201,7 @@ class RagController:
             "time_taken": guardrails_end_time - guardrails_start_time,
             "individual_guardrails": input_individual_guardrails,
         }
-        output_metadata["input_guardrails"] = input_guardrails_metadata
+        output_metadata["guardrails"]["input"] = input_guardrails_metadata
 
         if input_passes_guardrails is True:
             LOGGER.info("Query passed guardrails")
@@ -256,7 +257,7 @@ class RagController:
             "time_taken": guardrails_end_time - guardrails_start_time,
             "individual_guardrails": output_individual_guardrails,
         }
-        output_metadata["output_guardrails"] = output_guardrails_metadata
+        output_metadata["guardrails"]["output"] = output_guardrails_metadata
 
         if output_passes_guardrails is True:
             LOGGER.info("Response passed guardrails")
