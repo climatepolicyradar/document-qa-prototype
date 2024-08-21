@@ -9,6 +9,9 @@ def document_controller():
     return DocumentController()
 
 
+"""TODO:refactor these tests when better solution for metadata is found"""
+
+
 def test_load_metadata(document_controller):
     assert (
         not document_controller.metadata_df.empty
