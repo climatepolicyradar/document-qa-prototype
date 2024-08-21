@@ -10,7 +10,6 @@ from src.controllers.DocumentController import DocumentController
 from src.controllers.EvaluationController import EvaluationController
 from src.controllers.RagController import RagController
 from src.controllers.ScenarioController import ScenarioController
-from cpr_data_access.models import BaseDocument
 from src.logger import get_logger
 from src.models.data_models import RAGRequest
 from src.online.inference import LLMTypes
@@ -111,6 +110,7 @@ def do_rag(request: RAGRequest) -> dict:
     if result.rag_response.refused_answer():
         result = app_context["rag_controller"].execute_no_answer_flow(result)
 
+    result.rag_response.augment_passages_with_metadata(request.document_id)
     try:
         db_save = QAPair.from_end_to_end_generation(result, "prototype")
         db_save.save()
@@ -122,14 +122,14 @@ def do_rag(request: RAGRequest) -> dict:
 
 
 @app.get("/document/{document_id}")
-def get_document_data(document_id: str) -> BaseDocument:
+def get_document_data(document_id: str) -> dict:
     """
     Get a document by ID.
 
     :param str document_id: The document ID
     :return BaseDocument: The document
     """
-    return dc.create_base_document(document_id)
+    return dc.get_metadata(document_id)
 
 
 @app.get("/documents")

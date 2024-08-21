@@ -1,6 +1,5 @@
 import asyncio
 from datetime import datetime
-import time
 import json
 import random
 from src.controllers.DocumentController import DocumentController
@@ -11,7 +10,6 @@ from langchain_core.messages.base import BaseMessage
 from langchain_core.language_models.base import BaseLanguageModel
 from src.controllers.VespaController import VespaController
 from src.controllers.ObservabilityManager import ObservabilityManager
-from src.controllers.GuardrailController import GuardrailController, GuardrailType
 
 from fastapi import WebSocket
 from src.logger import get_logger
@@ -48,6 +46,7 @@ class RagController:
         # TODO self.observe = observe
 
         # Both guardrails select all
+        """
         self.input_guardrail_controller = GuardrailController(
             guardrail_types=[
                 GuardrailType.TOXICITY,
@@ -58,6 +57,7 @@ class RagController:
         self.output_guardrail_controller = GuardrailController(
             guardrail_types=[GuardrailType.TOXICITY, GuardrailType.WEB_SANITIZATION]
         )
+        """
 
     def get_llm(
         self, type: str, model: str, unfiltered: bool = False
@@ -196,6 +196,7 @@ class RagController:
         output_metadata["guardrails"] = {}
         start_time = datetime.now()
 
+        """
         LOGGER.info("Running guardrails on query")
         guardrails_start_time = time.time()
         (
@@ -227,6 +228,7 @@ class RagController:
                         metadata=output_metadata,
                     ),
                 )
+        """
 
         llm = self.get_llm(scenario.generation_engine, scenario.model)
 
@@ -252,6 +254,7 @@ class RagController:
         response_text = response["answer"]
         LOGGER.info(f"Response: {response_text}")
 
+        """
         LOGGER.info("Running guardrails on response")
         guardrails_start_time = time.time()
         (
@@ -272,6 +275,7 @@ class RagController:
         else:
             LOGGER.info("Response did not pass guardrails")
 
+        """
         end_time = datetime.now()
         duration = end_time - start_time
         LOGGER.info(f"Duration: {duration}")

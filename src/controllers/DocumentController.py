@@ -1,8 +1,6 @@
-from datetime import datetime
 from cpr_data_access.models import BaseDocument, BaseMetadata
-import pandas as pd
-from pathlib import Path
 import logging
+from src.controllers.LibraryManager import LibraryManager
 
 logger = logging.getLogger(__name__)
 
@@ -11,62 +9,33 @@ class DocumentController:
     """Controller for handling documents."""
 
     def __init__(self):
-        def load_metadata() -> pd.DataFrame:
-            """Load document metadata from a CSV file."""
-            csv_path = Path("data/docs_metadata.csv")
-            if not csv_path.exists():
-                logger.error("📄 CSV file does not exist")
-                return pd.DataFrame([])
-
-            logger.info("📄 Loading document metadata from CSV")
-            return pd.read_csv(csv_path)
-
-        self.metadata_df = load_metadata()
+        self.library_manager = LibraryManager()
 
     def get_metadata(self, document_id: str) -> dict:
         """Get metadata for a document."""
-        return self.metadata_df[
-            self.metadata_df["Internal Document ID"] == document_id
-        ].to_dict("records")[0]
+        return self.library_manager.get_document_metadata(document_id)
 
     def create_base_document(self, document_id: str) -> BaseDocument:
         """
         Flesh out a document with the necessary information.
 
         Assumes the document has a document ID only.
-
-        TODO: For the moment and for simplicity, I'm pulling this data from a CSV dump of the CPR database. But in the future we want a better way to do this. Is this data in vespa? Or grab it from something else?
         """
-        # document_id column is "Internal Document ID"
-        # document_name column is "Document Title"
-        # document_source_url column is f"https://app.climatepolicyradar.org/document/["Document ID"]
 
-        document_row = self.metadata_df[
-            self.metadata_df["Internal Document ID"] == document_id
-        ]
+        document_data = self.get_metadata(document_id)
 
-        assert not document_row.empty, "❌ Document ID not found in metadata"
-
-        logger.info(f"📄 Document row: {document_row}")
+        logger.info(f"📄 Document: {document_data}")
 
         document = BaseDocument(
             document_id=document_id,
-            document_name=document_row["Document Title"].values[0].strip()
-            if isinstance(document_row["Document Title"].values[0], str)
-            else "",
-            document_source_url=f"https://app.climatepolicyradar.org/document/{document_row['Document ID'].values[0].strip()}"
-            if isinstance(document_row["Document ID"].values[0], str)
-            else "",
+            document_name=document_data["name"].strip(),
+            document_source_url=f"https://app.climatepolicyradar.org/document/{document_data['slug'].strip()}",
             has_valid_text=True,
             document_metadata=BaseMetadata(
-                geography=document_row["Geography"].values[0].strip()
-                if isinstance(document_row["Geography"].values[0], str)
-                else "",
-                publication_ts=datetime.now(),  # TODO PROPER DATA
+                geography=document_data["geography"],
+                publication_ts=document_data["publication_ts"],
             ),
-            translated=True
-            if document_row["Language"].values[0] != "English"
-            else False,
+            translated=("English" in document_data["languages"]),
         )
 
         logger.info(f"📄 Document {document.document_id} fleshed out with metadata")

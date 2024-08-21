@@ -17,6 +17,7 @@ from peewee import (
     ForeignKeyField,
 )
 from playhouse.postgres_ext import BinaryJSONField
+from src.controllers.LibraryManager import LibraryManager
 from src.controllers.DocumentController import DocumentController
 from src.flows.utils import get_db
 
@@ -386,6 +387,21 @@ class RAGResponse(BaseModel):
             f"**[{idx}]**\n {window_text}"
             for idx, window_text in enumerate(window_texts)
         )
+
+    def augment_passages_with_metadata(self, document_id: str):
+        """Adds in page numbers (and TODO other metadata as context string) to the retrieved passages"""
+        lm = LibraryManager()
+        ids = [item["metadata"]["text_block_id"] for item in self.retrieved_documents]
+        data = lm.get_metadata_for_citation(document_id, ids)
+        print(data)
+
+        for item in self.retrieved_documents:
+            api_item = [
+                i
+                for i in data
+                if i["text_block_id"] == item["metadata"]["text_block_id"]
+            ][0]
+            item["metadata"]["page_number"] = api_item["page_number"]
 
 
 class AssertionModel(BaseModel):
