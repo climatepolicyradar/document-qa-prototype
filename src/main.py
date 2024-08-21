@@ -1,7 +1,7 @@
 import asyncio
 import json
 from anyio import Path
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from langchain.globals import set_verbose, set_debug
@@ -10,9 +10,10 @@ from src.controllers.DocumentController import DocumentController
 from src.controllers.EvaluationController import EvaluationController
 from src.controllers.RagController import RagController
 from src.controllers.ScenarioController import ScenarioController
+from src.controllers.FeedbackController import FeedbackController
 from cpr_data_access.models import BaseDocument
 from src.logger import get_logger
-from src.models.data_models import RAGRequest
+from src.models.data_models import RAGRequest, EndToEndGeneration
 from src.online.inference import LLMTypes
 from src import config
 from src.models.data_models import QAPair
@@ -246,3 +247,17 @@ async def evaluate(source_id: str):
     evals = await ec.evaluate_async(gen_model)
     print(evals)
     return evals
+
+@app.post("/feedback/{generation_uuid}")
+async def add_feedback(generation_uuid: str, feedback: dict):
+    """Add feedback for a specific generation."""
+    try:
+        qa_pair = QAPair.get_by_source_id(generation_uuid)
+        gen_model = qa_pair.to_end_to_end_generation()
+        feedback_instance = FeedbackController.add_feedback(gen_model, feedback)
+        return {"message": "Feedback added successfully", "feedback_id": feedback_instance.id}
+    except QAPair.DoesNotExist:
+        raise HTTPException(status_code=404, detail="Generation not found")
+    except Exception as e:
+        LOGGER.error(f"Error adding feedback: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")

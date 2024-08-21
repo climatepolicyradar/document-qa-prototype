@@ -435,6 +435,8 @@ class AssertionModel(BaseModel):
         return f"AssertionModel(assertion={self.assertion}, citations={self.citations})"
 
 
+from peewee import BooleanField, TextField
+
 class EndToEndGeneration(BaseModel):
     """
     Generation with config, a RAG response, and potentially an error.
