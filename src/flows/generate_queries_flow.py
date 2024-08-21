@@ -65,6 +65,16 @@ def get_doc_ids_from_s3(
     return doc_ids
 
 
+def get_file_from_s3(
+    bucket_name: str, file_path: str, session: boto3.Session = get_labs_session()
+) -> str:
+    logger = get_run_logger()
+    logger.info(f"🚀 Getting file from s3: {bucket_name}/{file_path}")
+    s3 = session.client("s3")
+    response = s3.get_object(Bucket=bucket_name, Key=file_path)
+    return response["Body"].read().decode("utf-8")
+
+
 @task(log_prints=True)
 def spawn_query_tasks(doc_ids: list[str], tag: str, config: str, limit: int = 5):
     logger = get_run_logger()
@@ -101,7 +111,14 @@ def generate_queries_for_document(
     seed_queries = sc.load_seed_queries()
 
     logger.info(f"Loading document from s3: {s3_prefix}/{doc_id}")
-    doc = BaseDocument.load_from_remote(s3_prefix, doc_id)
+    s3_bucket = s3_prefix.split("/")[0]
+    s3_prefix_path = "/".join(s3_prefix.split("/")[1:])
+
+    doc_json = get_file_from_s3(s3_bucket, f"{s3_prefix_path}/{doc_id}.json")
+    with open(f"./data/doc_cache/{doc_id}.json", "w") as f:
+        f.write(doc_json)
+
+    doc = BaseDocument.load_from_local("./data/doc_cache/", doc_id)
 
     logger.info("Initializing RAG controller")
     rc = RagController()
@@ -115,6 +132,9 @@ def generate_queries_for_document(
                 document=doc, scenario=scenario, seed_queries=seed_queries, tag=tag
             )
 
+            logger.info(
+                f"Created {len(queries)} queries for {scenario.prompt.prompt_template}"
+            )
         except Exception as e:
             logger.error(f"Error generating queries for {doc.document_id}: {e}")
             raise e
@@ -127,7 +147,7 @@ def generate_queries_for_document(
 
 @flow(log_prints=True)
 def query_control_flow(
-    config: str = "src/configs/eval_prefect_1_queries_config.yaml",
+    config: str = "src/configs/experiment_MAIN_QUERIES_1.0.yaml",
     limit: int = 100,
     offset: int = 0,
     tag: str = "test",
@@ -142,10 +162,7 @@ def query_control_flow(
 
     doc_ids = get_doc_ids_from_s3()
 
-    # This is generating 1 query only at the moment
-    spawn_query_tasks(
-        doc_ids[offset : min(offset + limit, len(doc_ids))], tag, config, 1
-    )
+    spawn_query_tasks(doc_ids[offset : min(offset + limit, len(doc_ids))], tag, config)
 
 
 if __name__ == "__main__":
@@ -154,7 +171,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--config",
         type=str,
-        default="src/configs/eval_prefect_1_queries_config.yaml",
+        default="src/configs/experiment_MAIN_QUERIES_1.0.yaml",
         help="Path to the configuration file",
     )
     parser.add_argument(
