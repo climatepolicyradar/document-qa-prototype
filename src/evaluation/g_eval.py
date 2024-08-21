@@ -25,8 +25,8 @@ class GEval(Evaluator, ABC):
     TYPE = ""
     NAME = ""
 
-    def __init__(self, model_name: str = "gemini-1.5-pro"):
-        self.model = RagController().get_llm("gemini", model_name)
+    def __init__(self, platform: str = "gemini", model_name: str = "gemini-1.5-pro"):
+        self.model = RagController().get_llm(platform, model_name)
 
     def evaluate(
         self, generation: EndToEndGeneration, prompt: Optional[str] = None
@@ -41,12 +41,17 @@ class GEval(Evaluator, ABC):
             prompt = self.get_prompt(generation)
         response = self.model.invoke(prompt)
 
-        result = response.content.strip()
+        if hasattr(response, "content"):
+            result = response.content.strip()
+        elif isinstance(response, str):
+            result = response.strip()
+        else:
+            raise ValueError(f"Invalid response type: {type(response)}")
 
         if not result.isdigit():  # type: ignore
-            raise ValueError(f"G-Eval score is not a digit: {response.content}")  # type: ignore
+            raise ValueError(f"G-Eval score is not a digit: {result}")  # type: ignore
 
-        score = self.response_postprocessor(response)
+        score = self.response_postprocessor(result)
 
         if score is not None:
             return Score(
@@ -61,6 +66,6 @@ class GEval(Evaluator, ABC):
         """Returns the prompt for the evaluator"""
         pass
 
-    def response_postprocessor(self, response) -> Optional[int]:
+    def response_postprocessor(self, response: str) -> Optional[int]:
         """Post-processes the response"""
-        return int(response.content)
+        return int(response)
