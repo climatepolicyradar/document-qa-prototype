@@ -1,5 +1,6 @@
 import sys
 from src.flows.generate_queries_flow import query_control_flow
+from src.flows.experiment_flows import create_gpt4_evals_flow
 import dotenv
 import os
 from prefect.blocks.system import JSON
@@ -13,7 +14,7 @@ DEFAULT_JOB_VARIABLES["memory"] = 8192
 DOCKER_REGISTRY = os.getenv("DOCKER_REGISTRY")
 
 # Add flows here to deploy
-all_flows = [query_control_flow]
+all_flows = [query_control_flow, create_gpt4_evals_flow]
 
 base_image = DeploymentImage(
     name=f"{DOCKER_REGISTRY}/prefect-rag-labs",

@@ -43,7 +43,6 @@ def create_gpt4_evals_flow(tag: str = "g_eval_comparison_experiment", limit: int
 
         logger.info(f"📋 Evaluations: {answer.evals}")
         answer.save()
-        answer.save()
 
 
 @flow
