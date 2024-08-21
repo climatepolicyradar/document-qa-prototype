@@ -466,6 +466,34 @@ class EndToEndGeneration(BaseModel):
 
         return self.rag_response.text
 
+    @classmethod
+    def set_uuid(cls, data: dict) -> dict:
+        """Sets the UUID for the query."""
+        query = data["rag_request"].query
+        response = data["rag_response"].text if data.get("rag_response") else "None"
+        document_id = data["rag_request"].document_id
+
+        if data.get("uuid") is None:
+            _unique_id = "_".join([query, response, document_id])
+            data["uuid"] = hashlib.md5(_unique_id.encode()).hexdigest()
+        return data
+
+    def to_db_model(self, tag: str, query_id: Optional[str] = None) -> QAPair:
+        """Converts the EndToEndGeneration object to a QAPair object."""
+        return QAPair(
+            document_id=self.rag_request.document_id,
+            model=self.rag_request.model,
+            prompt=self.rag_request.prompt_template,
+            pipeline_id=tag,
+            question=self.rag_request.query,
+            query_id=query_id,
+            answer=self.get_answer(False),
+            evals={},
+            metadata={},
+            generation=json.dumps(self.model_dump()),
+        )
+
+
 
 class FeedbackRequest(BaseModel):
     approve: Optional[bool] = None
@@ -496,35 +524,6 @@ class Feedback(Model):
 
     class Meta:
         database = db
-
-class EndToEndGeneration(BaseModel):
-    @classmethod
-    def set_uuid(cls, data: dict) -> dict:
-        """Sets the UUID for the query."""
-        query = data["rag_request"].query
-        response = data["rag_response"].text if data.get("rag_response") else "None"
-        document_id = data["rag_request"].document_id
-
-        if data.get("uuid") is None:
-            _unique_id = "_".join([query, response, document_id])
-            data["uuid"] = hashlib.md5(_unique_id.encode()).hexdigest()
-        return data
-
-    def to_db_model(self, tag: str, query_id: Optional[str] = None) -> QAPair:
-        """Converts the EndToEndGeneration object to a QAPair object."""
-        return QAPair(
-            document_id=self.rag_request.document_id,
-            model=self.rag_request.model,
-            prompt=self.rag_request.prompt_template,
-            pipeline_id=tag,
-            question=self.rag_request.query,
-            query_id=query_id,
-            answer=self.get_answer(False),
-            evals={},
-            metadata={},
-            generation=json.dumps(self.model_dump()),
-        )
-
 
 class RAGLog(BaseModel):
     """Log object for the RAG pipeline."""
