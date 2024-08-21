@@ -1,6 +1,8 @@
 from typing import Optional
 from abc import ABC, abstractmethod
 
+import re
+
 from src.evaluation.evaluator import Evaluator
 from src.models.data_models import EndToEndGeneration
 from src.controllers.RagController import RagController
@@ -39,8 +41,9 @@ class GEval(Evaluator, ABC):
 
         if prompt is None:
             prompt = self.get_prompt(generation)
+        
         response = self.model.invoke(prompt)
-s
+
         if hasattr(response, "content"):
             result = response.content.strip()
         elif isinstance(response, str):
@@ -68,11 +71,25 @@ s
         """Returns the prompt for the evaluator"""
         pass
 
-    def response_postprocessor(self, response: str) -> Optional[int]:
-        """Post-processes the response"""
-        return int(response)
 
     @abstractmethod
     def get_success(self, score: float) -> bool:
         """Returns the success of the evaluator"""
         pass
+
+
+    def response_postprocessor(self, response: str) -> Optional[int]:
+        """Post-processes the response"""
+        try:
+            return int(response)
+        except ValueError:
+            try:
+                LOGGER.warning(f"Error processing response: {response}, trying to extract the score")
+                _digit_pattern = re.compile(r"(\d+)")
+                match = _digit_pattern.search(response)
+                if match is None:
+                    return None
+                return int(match.group(1))
+            except Exception:
+                LOGGER.error(f"Failed to extract the score from response")
+                return None
