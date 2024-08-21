@@ -16,6 +16,10 @@ class ObservabilityManager:
         get_secret("LANGFUSE_SECRET_KEY")
         get_secret("LANGFUSE_PUBLIC_KEY")
 
+        if os.environ["LANGFUSE_HOST"] is None:
+            LOGGER.warning("LANGFUSE_HOST is not set")
+            return
+
         LOGGER.info(
             f"Initializing ObservabilityManager for {os.environ['LANGFUSE_HOST']}"
         )
