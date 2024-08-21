@@ -79,7 +79,9 @@ class GuardrailController:
             "IN_PASSPORT",
         ]
 
-        return Guard().use(DetectPII, entity_types, on_fail=self._on_fail_action)
+        return Guard().use(
+            DetectPII, entity_types, on_fail=self._on_fail_action, use_local=True
+        )
 
     def create_guardrail(self, guardrail_type: GuardrailType, **kwargs) -> Guard:
         """Get a guardrail based on the type"""

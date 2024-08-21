@@ -49,7 +49,11 @@ class RagController:
 
         # Both guardrails select all
         self.input_guardrail_controller = GuardrailController(
-            guardrail_types=[GuardrailType.TOXICITY, GuardrailType.WEB_SANITIZATION]
+            guardrail_types=[
+                GuardrailType.TOXICITY,
+                GuardrailType.WEB_SANITIZATION,
+                GuardrailType.PII,
+            ]
         )
         self.output_guardrail_controller = GuardrailController(
             guardrail_types=[GuardrailType.TOXICITY, GuardrailType.WEB_SANITIZATION]
