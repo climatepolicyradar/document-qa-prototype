@@ -468,9 +468,9 @@ class EndToEndGeneration(BaseModel):
     @classmethod
     def set_uuid(cls, data: dict) -> dict:
         """Sets the UUID for the query."""
-        query = data["rag_request"]["query"]
-        response = data["rag_response"]["text"] if data.get("rag_response") else "None"
-        document_id = data["rag_request"]["document_id"]
+        query = data["rag_request"].query
+        response = data["rag_response"].text if data.get("rag_response") else "None"
+        document_id = data["rag_request"].document_id
 
         if data.get("uuid") is None:
             _unique_id = "_".join([query, response, document_id])
