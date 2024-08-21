@@ -40,7 +40,7 @@ jobs:
 
       - name: Run test suite
         env:
-          GOOGLE_APPLICATION_CREDENTIALS_BASE_64: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_BASE_64 }}
+          GOOGLE_APPLICATION_CREDENTIALS_BASE64: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_BASE64 }}
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
         run: |
           poetry run python -m pytest \
