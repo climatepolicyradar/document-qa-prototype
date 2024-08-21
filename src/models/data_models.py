@@ -15,6 +15,8 @@ from peewee import (
     UUIDField,
     DateTimeField,
     ForeignKeyField,
+    BooleanField,
+    
 )
 from playhouse.postgres_ext import BinaryJSONField
 from src.controllers.DocumentController import DocumentController
@@ -435,7 +437,6 @@ class AssertionModel(BaseModel):
         return f"AssertionModel(assertion={self.assertion}, citations={self.citations})"
 
 
-from peewee import BooleanField, TextField
 
 class EndToEndGeneration(BaseModel):
     """
@@ -466,6 +467,7 @@ class EndToEndGeneration(BaseModel):
 
         return self.rag_response.text
 
+    @model_validator(mode="before")
     @classmethod
     def set_uuid(cls, data: dict) -> dict:
         """Sets the UUID for the query."""
