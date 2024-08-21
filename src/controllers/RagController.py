@@ -196,7 +196,7 @@ class RagController:
         guardrails_end_time = time.time()
 
         input_guardrails_metadata = {
-            "passes_guardrails": input_passes_guardrails,
+            "passes": input_passes_guardrails,
             "time_taken": guardrails_end_time - guardrails_start_time,
             "individual_guardrails": input_individual_guardrails,
         }
@@ -252,7 +252,7 @@ class RagController:
         guardrails_end_time = time.time()
 
         output_guardrails_metadata = {
-            "passes_guardrails": output_passes_guardrails,
+            "passes": output_passes_guardrails,
             "time_taken": guardrails_end_time - guardrails_start_time,
             "individual_guardrails": output_individual_guardrails,
         }
