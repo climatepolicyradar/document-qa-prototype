@@ -34,7 +34,10 @@ def pivot_table_by_eval(
         _df["_tmp"] = _df["_tmp"].apply(transformation_func)
 
     return _df.pivot_table(
-        index=index_attribute, columns=column_attribute, values="_tmp", aggfunc=aggregation_func
+        index=index_attribute,
+        columns=column_attribute,
+        values="_tmp",
+        aggfunc=aggregation_func,
     )
 
 
