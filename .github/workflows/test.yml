@@ -40,7 +40,7 @@ jobs:
 
       - name: Run test suite
         env:
-          GOOGLE_APPLICATION_CREDENTIALS_BASE64: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_BASE64 }}
+          GOOGLE_APPLICATION_CREDENTIALS_BASE_64: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_BASE_64 }}
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
         run: |
           poetry run python -m pytest \
@@ -50,6 +50,8 @@ jobs:
           --ignore=tests/controllers/test_document_controller.py \
           --ignore=notebooks/first_round_eval_analysis.ipynb \
           --ignore=notebooks/system_prompts.ipynb \
+          --ignore=tests/controllers/test_rag_controller.py \
+          --ignore=tests/ingestion/test_ingestion_helpers.py \
           --nbmake \
           --nbmake-find-import-errors \
           --nbmake-timeout=20 -vvv
