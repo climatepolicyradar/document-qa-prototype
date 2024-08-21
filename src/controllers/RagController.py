@@ -1,5 +1,6 @@
 import asyncio
 from datetime import datetime
+import time
 import json
 import random
 from src.controllers.DocumentController import DocumentController
@@ -187,25 +188,24 @@ class RagController:
         start_time = datetime.now()
 
         LOGGER.info("Running guardrails on query")
-        guardrails_start_time = datetime.now()
+        guardrails_start_time = time.time()
         (
             input_passes_guardrails,
             input_individual_guardrails,
         ) = self.input_guardrail_controller.validate_text(query)
-        guardrails_end_time = datetime.now()
+        guardrails_end_time = time.time()
+
+        input_guardrails_metadata = {
+            "passes_guardrails": input_passes_guardrails,
+            "time_taken": guardrails_end_time - guardrails_start_time,
+            "individual_guardrails": input_individual_guardrails,
+        }
+        output_metadata["input_guardrails"] = input_guardrails_metadata
 
         if input_passes_guardrails is True:
             LOGGER.info("Query passed guardrails")
         else:
             LOGGER.info("Query did not pass guardrails")
-
-            guardrails_metadata = {
-                "passes_guardrails": False,
-                "individual_guardrails": input_individual_guardrails,
-                "time_taken": guardrails_end_time - guardrails_start_time,
-            }
-
-            output_metadata["input_guardrails"] = guardrails_metadata
 
             if return_early_on_guardrail_failure:
                 return EndToEndGeneration(
@@ -244,23 +244,24 @@ class RagController:
         LOGGER.info(f"Response: {response_text}")
 
         LOGGER.info("Running guardrails on response")
-        guardrails_start_time = datetime.now()
+        guardrails_start_time = time.time()
         (
             output_passes_guardrails,
             output_individual_guardrails,
         ) = self.output_guardrail_controller.validate_text(response_text)
-        guardrails_end_time = datetime.now()
+        guardrails_end_time = time.time()
+
+        output_guardrails_metadata = {
+            "passes_guardrails": output_passes_guardrails,
+            "time_taken": guardrails_end_time - guardrails_start_time,
+            "individual_guardrails": output_individual_guardrails,
+        }
+        output_metadata["output_guardrails"] = output_guardrails_metadata
 
         if output_passes_guardrails is True:
             LOGGER.info("Response passed guardrails")
         else:
             LOGGER.info("Response did not pass guardrails")
-
-            output_metadata["output_guardrails"] = {
-                "passes_guardrails": False,
-                "individual_guardrails": output_individual_guardrails,
-                "time_taken": guardrails_end_time - guardrails_start_time,
-            }
 
         end_time = datetime.now()
         duration = end_time - start_time
