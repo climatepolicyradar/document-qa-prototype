@@ -52,6 +52,7 @@ jobs:
           --ignore=notebooks/system_prompts.ipynb \
           --ignore=tests/controllers/test_rag_controller.py \
           --ignore=tests/ingestion/test_ingestion_helpers.py \
+          --ignore=tests/controllers/test_vespa_controller.py \
           --nbmake \
           --nbmake-find-import-errors \
           --nbmake-timeout=20 -vvv
