@@ -1,5 +1,4 @@
 import os
-import time
 from prefect import flow, get_run_logger, task
 import psutil
 from src.controllers.RagController import RagController
@@ -77,11 +76,8 @@ def get_file_from_s3(
 
 @task(log_prints=True)
 def spawn_query_tasks(doc_ids: list[str], tag: str, config: str, limit: int = 5):
-    logger = get_run_logger()
     for doc_id in doc_ids:
         generate_queries_for_document.submit(doc_id, tag, config, get_db(), limit=limit)
-        logger.info(f"🕐 Sleeping for 5 seconds before processing doc_id: {doc_id}")
-        time.sleep(5)
 
 
 #

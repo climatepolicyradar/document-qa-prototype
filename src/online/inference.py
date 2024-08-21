@@ -124,6 +124,7 @@ def get_llm(
     elif _llm_type == LLMTypes.OPENAI:
         # 'seed' is part of the openai api:
         # https://cookbook.openai.com/examples/reproducible_outputs_with_the_seed_parameter
+        get_secret("OPENAI_API_KEY")
         return ChatOpenAI(model=model or "gpt-3.5-turbo", temperature=0, seed=42)
 
     elif _llm_type == LLMTypes.TITAN:
