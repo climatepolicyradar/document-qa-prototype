@@ -27,7 +27,7 @@ class GuardrailController:
         self,
         guardrail_types: list[GuardrailType] = [
             GuardrailType.TOXICITY,
-            GuardrailType.PII,  # This fails in CI as the original package is broken
+            # GuardrailType.PII,  # This fails in CI as the original package is broken
             GuardrailType.WEB_SANITIZATION,
         ],
     ):
