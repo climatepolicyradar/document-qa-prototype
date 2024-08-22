@@ -410,7 +410,10 @@ class RagController:
 
         topics = self.run_llm(scenario, {"context_str": retrieved_passages_joined})
 
-        topics_list = self.process_extracted_topics(topics)
+        try:
+            topics_list = self.process_extracted_topics(topics)
+        except Exception:
+            topics_list = []
 
         LOGGER.info(f"🔍 System summarised the query: {summary}")
         result.rag_response.add_metadata("no_answer_summary", summary)
