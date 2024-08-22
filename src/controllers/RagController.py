@@ -446,7 +446,8 @@ class RagController:
         results = []
         for sentence, citations in matches:
             citation_numbers = [c.strip() for c in citations.split(",")]
-            results.append((sentence.strip(), citation_numbers))
+            formatted_sentence = sentence.replace("- ", "").strip()
+            results.append((formatted_sentence, citation_numbers))
 
         LOGGER.info(f"🔍 Extracted {len(results)} sentences with citations")
 
