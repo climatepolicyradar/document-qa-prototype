@@ -1,0 +1,26 @@
+# Task
+Generate a single very long or multi-part question related to the document's content. This query should test the system's ability to handle complex, multi-faceted inquiries.
+
+Assume that the human hasn't read the document yet, but is familiar with the main topic of the document.
+
+# Examples
+You are provided some examples of real queries below. The generated queries should be similar to these in style but should be significantly longer or consist of multiple parts.
+
+The example queries are not examples for this specific task, but are examples of real queries that we've seen in practice. You should generate queries that are similar but MAKE SURE THEY MATCH THE TASK GIVEN ABOVE. 
+
+Examples of real queries:
+{% for row in seed_queries %}
+- {{ row.text }}
+{% endfor %}
+
+Some of the above queries are keywords. Aim to generate similar or exactly the same keywords as in the list, if relevant for the document's topic.
+
+Format your response as a JSON following the below schema:
+{"queries": list[str]}
+
+The list will contain exactly 1 query.
+
+Do not add anything to this schema. The list should contain exactly 1 queries. 
+
+The document:
+{{document}}

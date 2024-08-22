@@ -1,5 +1,6 @@
 import sys
-from src.flows.experiment_flows import process_faithfulness_experiment_answer_job
+from src.flows.generate_queries_flow import query_control_flow
+from src.flows.experiment_flows import create_gpt4_evals_flow
 import dotenv
 import os
 from prefect.blocks.system import JSON
@@ -8,12 +9,12 @@ from prefect.deployments.runner import DeploymentImage
 dotenv.load_dotenv()
 
 DEFAULT_JOB_VARIABLES = JSON.load("default-job-variables-prefect-mvp-labs").value
-DEFAULT_JOB_VARIABLES["cpu"] = 1024
-DEFAULT_JOB_VARIABLES["memory"] = 4096
+DEFAULT_JOB_VARIABLES["cpu"] = 2048
+DEFAULT_JOB_VARIABLES["memory"] = 8192
 DOCKER_REGISTRY = os.getenv("DOCKER_REGISTRY")
 
 # Add flows here to deploy
-all_flows = [process_faithfulness_experiment_answer_job]
+all_flows = [query_control_flow, create_gpt4_evals_flow]
 
 base_image = DeploymentImage(
     name=f"{DOCKER_REGISTRY}/prefect-rag-labs",
