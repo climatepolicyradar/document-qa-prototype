@@ -8,7 +8,41 @@ from src.flows.queue import get_queue
 from src.flows.tasks.data_tasks import get_query_by_id, save_answer
 from src.flows.tasks.qa_tasks import generate_answer_task
 from src.flows.utils import get_db
-from src.models.data_models import Prompt, Scenario
+from src.models.data_models import Prompt, QAPair, Scenario
+from peewee import fn
+
+
+@flow
+def create_gpt4_evals_flow(tag: str = "g_eval_comparison_experiment", limit: int = 15):
+    logger = get_run_logger()
+    ec = EvaluationController()
+    ec.set_evaluators(
+        [
+            "g_eval_faithfulness_gpt4o",
+        ]
+    )
+
+    # Get answers for this run with no gpt-4o eval
+    answers = (
+        QAPair.select()
+        .where(QAPair.evals.has_key("g_eval_faithfulness_gpt4o") == False)  # noqa: E712
+        .where(QAPair.pipeline_id == tag)
+        .order_by(fn.Random())
+        .limit(limit)
+    )
+
+    logger.info(f"🎲 Got {len(answers)} answers with tag {tag} with no gpt-4o eval")
+
+    for answer in answers:
+        logger.info(f"🎲 Evaluating answer {answer.id}")
+        result = ec.evaluate_all(answer.to_end_to_end_generation())
+        logger.info(f"🎲 Result: {result}")
+
+        for score in result:
+            answer.evals[f"{score.name}-{score.type}"] = score.model_dump_json()
+
+        logger.info(f"📋 Evaluations: {answer.evals}")
+        answer.save()
 
 
 @flow
@@ -75,4 +109,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    process_faithfulness_experiment_answer_job(args.tag)
+    create_gpt4_evals_flow(args.tag)
