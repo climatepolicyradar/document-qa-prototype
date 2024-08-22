@@ -1,5 +1,6 @@
 import asyncio
 from datetime import datetime
+import time
 import json
 import random
 from src.controllers.DocumentController import DocumentController
@@ -10,7 +11,7 @@ from langchain_core.messages.base import BaseMessage
 from langchain_core.language_models.base import BaseLanguageModel
 from src.controllers.VespaController import VespaController
 from src.controllers.ObservabilityManager import ObservabilityManager
-from src.controllers.GuardrailController import GuardrailController
+from src.controllers.GuardrailController import GuardrailController, GuardrailType
 
 from fastapi import WebSocket
 from src.logger import get_logger
@@ -47,8 +48,16 @@ class RagController:
         # TODO self.observe = observe
 
         # Both guardrails select all
-        self.input_guardrail_controller = GuardrailController()
-        self.output_guardrail_controller = GuardrailController()
+        self.input_guardrail_controller = GuardrailController(
+            guardrail_types=[
+                GuardrailType.TOXICITY,
+                GuardrailType.WEB_SANITIZATION,
+                # GuardrailType.PII, # TODO: this fails in CI due to a broken package
+            ]
+        )
+        self.output_guardrail_controller = GuardrailController(
+            guardrail_types=[GuardrailType.TOXICITY, GuardrailType.WEB_SANITIZATION]
+        )
 
     def get_llm(
         self, type: str, model: str, unfiltered: bool = False
@@ -166,14 +175,58 @@ class RagController:
         self,
         query: str,
         scenario: Scenario,
+        return_early_on_guardrail_failure: bool = False,
     ) -> EndToEndGeneration:
-        """Run the RAG pipeline for a given query and scenario."""
+        """
+        Run the RAG pipeline for a given query and scenario.
+
+        :param query: user query
+        :param scenario: scenario to run
+        :param return_early_on_guardrail_failure: Whether to return early if the input
+            guardrail fails. Defaults to False
+        :return EndToEndGeneration: object containing request and response information
+            and metadata
+        """
 
         LOGGER.info(f"***RUNNING RAG - query = `{query}`***")
 
         assert scenario.document is not None, "Scenario must have a document"
 
+        output_metadata = {}
+        output_metadata["guardrails"] = {}
         start_time = datetime.now()
+
+        LOGGER.info("Running guardrails on query")
+        guardrails_start_time = time.time()
+        (
+            input_passes_guardrails,
+            input_individual_guardrails,
+        ) = self.input_guardrail_controller.validate_text(query)
+        guardrails_end_time = time.time()
+
+        input_guardrails_metadata = {
+            "passes": input_passes_guardrails,
+            "time_taken": guardrails_end_time - guardrails_start_time,
+            "individual_guardrails": input_individual_guardrails,
+        }
+        output_metadata["guardrails"]["input"] = input_guardrails_metadata
+
+        if input_passes_guardrails is True:
+            LOGGER.info("Query passed guardrails")
+        else:
+            LOGGER.info("Query did not pass guardrails")
+
+            if return_early_on_guardrail_failure:
+                return EndToEndGeneration(
+                    config=scenario.get_config(),
+                    rag_request=RAGRequest.from_scenario(query, scenario),
+                    rag_response=RAGResponse(
+                        text="",
+                        retrieved_documents=[],
+                        query=query,
+                        metadata=output_metadata,
+                    ),
+                )
 
         llm = self.get_llm(scenario.generation_engine, scenario.model)
 
@@ -199,16 +252,37 @@ class RagController:
         response_text = response["answer"]
         LOGGER.info(f"Response: {response_text}")
 
+        LOGGER.info("Running guardrails on response")
+        guardrails_start_time = time.time()
+        (
+            output_passes_guardrails,
+            output_individual_guardrails,
+        ) = self.output_guardrail_controller.validate_text(response_text)
+        guardrails_end_time = time.time()
+
+        output_guardrails_metadata = {
+            "passes": output_passes_guardrails,
+            "time_taken": guardrails_end_time - guardrails_start_time,
+            "individual_guardrails": output_individual_guardrails,
+        }
+        output_metadata["guardrails"]["output"] = output_guardrails_metadata
+
+        if output_passes_guardrails is True:
+            LOGGER.info("Response passed guardrails")
+        else:
+            LOGGER.info("Response did not pass guardrails")
+
         end_time = datetime.now()
         duration = end_time - start_time
         LOGGER.info(f"Duration: {duration}")
 
-        metadata = {}
         try:
-            metadata["assertions"] = self.extract_assertions_from_answer(response_text)
+            output_metadata["assertions"] = self.extract_assertions_from_answer(
+                response_text
+            )
         except Exception as e:
             LOGGER.error(f"Error extracting assertions: {e}")
-            metadata["errors"] = ["Could not extract assertions"]
+            output_metadata["errors"] = ["Could not extract assertions"]
 
         response = EndToEndGeneration(
             config=scenario.get_config(),
@@ -217,7 +291,7 @@ class RagController:
                 text=response_text,
                 retrieved_documents=[d.dict() for d in response["documents"]],
                 query=query,
-                metadata=metadata,
+                metadata=output_metadata,
             ),
         )
 
