@@ -16,12 +16,6 @@ RUN poetry install --no-interaction --no-root
 COPY data ./data
 COPY src ./src
 
-RUN apt-get update && apt-get install -y git
-
-RUN poetry run guardrails hub install hub://guardrails/detect_pii
-RUN poetry run guardrails hub install hub://guardrails/toxic_language
-RUN poetry run guardrails hub install hub://guardrails/web_sanitization
-
 RUN prefect config set PREFECT_API_URL="https://api.prefect.cloud/api/accounts/4b1558a0-3c61-4849-8b18-3e97e0516d78/workspaces/1753b4f0-6221-4f6a-9233-b146518b4545"
 RUN prefect config set PREFECT_API_KEY="$PREFECT_API_KEY"
 
