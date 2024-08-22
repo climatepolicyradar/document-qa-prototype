@@ -109,7 +109,7 @@ def do_rag(request: RAGRequest) -> dict:
         query=request.query, scenario=request.as_scenario(dc)
     )
 
-    result.rag_response.metadata["responded"] = result.rag_response.refused_answer()
+    result.rag_response.metadata["responded"] = not result.rag_response.refused_answer()
 
     if result.rag_response.refused_answer():
         result = app_context["rag_controller"].execute_no_answer_flow(result)

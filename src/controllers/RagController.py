@@ -452,11 +452,6 @@ class RagController:
 
         LOGGER.info(f"🔍 Extracted {len(results)} sentences with citations")
 
-        # extracted_sentences = extract_sentences_with_citations(rag_answer)
-        # LOGGER.debug(f"🔢 Extracted sentences: {extracted_sentences}")
-
-        assert len(results) > 0, "No sentences with citations found"
-
         for line in results:
             print(line)
             assertion = line[0]
