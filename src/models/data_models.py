@@ -393,7 +393,6 @@ class RAGResponse(BaseModel):
         lm = LibraryManager()
         ids = [item["metadata"]["text_block_id"] for item in self.retrieved_documents]
         data = lm.get_metadata_for_citation(document_id, ids)
-        print(data)
 
         for item in self.retrieved_documents:
             api_item = [

@@ -101,6 +101,10 @@ def do_rag(request: RAGRequest) -> dict:
     request.model = config_sc.model
     request.generation_engine = LLMTypes(config_sc.generation_engine)
 
+    LOGGER.info(
+        f"Running RAG pipeline with model {request.model} and prompt {request.prompt_template}"
+    )
+
     result = app_context["rag_controller"].run_rag_pipeline(
         query=request.query, scenario=request.as_scenario(dc)
     )

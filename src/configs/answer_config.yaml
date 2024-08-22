@@ -1,6 +1,6 @@
 models:
   - generation_engine: vertexai
-    model: mistral-nemo
+    model: llama3-1-70b-instruct
 model_selection: random
 prompt_templates:
   - prompt_template: response/FAITHFULQA_SCHIMANSKI_CITATION_QA_TEMPLATE_MODIFIED
