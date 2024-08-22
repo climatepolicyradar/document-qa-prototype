@@ -37,6 +37,15 @@ from src import config
 LOGGER = get_logger(__name__)
 
 
+def get_unique_citations(assertions: list[AssertionModel]) -> set[int]:
+    """Get the list of unique citations from a list of assertions."""
+    citations = set()
+    for assertion in assertions:
+        citations.update([int(i) for i in assertion.citations])
+
+    return citations
+
+
 class RagController:
     """Controller for RAG operations"""
 
@@ -52,7 +61,7 @@ class RagController:
             guardrail_types=[
                 GuardrailType.TOXICITY,
                 GuardrailType.WEB_SANITIZATION,
-                # GuardrailType.PII, # TODO: this fails in CI due to a broken package
+                GuardrailType.PII,  # TODO: this fails in CI due to a broken package
             ]
         )
         self.output_guardrail_controller = GuardrailController(
@@ -284,12 +293,41 @@ class RagController:
             LOGGER.error(f"Error extracting assertions: {e}")
             output_metadata["errors"] = ["Could not extract assertions"]
 
+        retrieved_documents_as_dicts = [d.dict() for d in response["documents"]]
+
+        # If assertions are present, reorder the documents to put the cited documents first
+        if output_metadata.get("assertions") is not None:
+            idxs_of_cited_documents = get_unique_citations(
+                output_metadata["assertions"]
+            )
+            other_idxs = (
+                set(range(len(retrieved_documents_as_dicts))) - idxs_of_cited_documents
+            )
+
+            documents_reordered = []
+
+            for idx in idxs_of_cited_documents:
+                cited_doc = retrieved_documents_as_dicts[idx]
+                cited_doc["cited"] = True
+                cited_doc["citation_idx"] = idx
+
+                documents_reordered.append(cited_doc)
+
+            for idx in other_idxs:
+                other_doc = retrieved_documents_as_dicts[idx]
+                other_doc["cited"] = False
+                other_doc["citation_idx"] = None
+
+                documents_reordered.append(other_doc)
+
+            retrieved_documents_as_dicts = documents_reordered
+
         response = EndToEndGeneration(
             config=scenario.get_config(),
             rag_request=RAGRequest.from_scenario(query, scenario),
             rag_response=RAGResponse(
                 text=response_text,
-                retrieved_documents=[d.dict() for d in response["documents"]],
+                retrieved_documents=retrieved_documents_as_dicts,
                 query=query,
                 metadata=output_metadata,
             ),
