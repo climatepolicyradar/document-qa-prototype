@@ -27,7 +27,7 @@ class GuardrailController:
         self,
         guardrail_types: list[GuardrailType] = [
             GuardrailType.TOXICITY,
-            # GuardrailType.PII, # This fails in CI as the original package is broken
+            # GuardrailType.PII,  # This fails in CI as the original package is broken
             GuardrailType.WEB_SANITIZATION,
         ],
     ):
@@ -44,7 +44,7 @@ class GuardrailController:
 
     def _create_toxicity_guard(self, threshold: float = 0.5) -> Guard:
         return Guard().use(
-            ToxicLanguage,
+            ToxicLanguage(use_local=True),
             threshold=threshold,
             validation_method="sentence",
             on_fail=self._on_fail_action,
@@ -80,7 +80,10 @@ class GuardrailController:
         ]
 
         return Guard().use(
-            DetectPII, entity_types, on_fail=self._on_fail_action, use_local=True
+            DetectPII(use_local=True, pii_entities=entity_types),
+            entity_types,
+            on_fail=self._on_fail_action,
+            use_local=True,
         )
 
     def create_guardrail(self, guardrail_type: GuardrailType, **kwargs) -> Guard:
