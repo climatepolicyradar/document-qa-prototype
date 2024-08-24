@@ -4,7 +4,6 @@ from src.flows.generate_answers_flow import (
     queue_answer_flow,
     process_answer_job_from_queue,
 )
-from src.flows.slack_update_flow import generate_update
 import dotenv
 import os
 from prefect.blocks.system import JSON
@@ -22,7 +21,6 @@ all_flows = [
     queue_answer_flow,
     process_answer_job_from_queue,
     process_eval_experiment_from_queue,
-    generate_update,
 ]
 
 base_image = DeploymentImage(
