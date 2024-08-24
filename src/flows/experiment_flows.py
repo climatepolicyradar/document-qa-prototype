@@ -4,7 +4,7 @@ from src.controllers.RagController import RagController
 from src.controllers.EvaluationController import EvaluationController
 from src.flows.queue import get_queue, queue_job
 
-from src.flows.tasks.data_tasks import get_query_by_id, save_answer
+from src.flows.tasks.data_tasks import get_answer_by_id, save_answer, get_query_by_id
 from src.flows.tasks.qa_tasks import generate_answer_task
 from src.flows.utils import get_db
 from src.models.data_models import Prompt, QAPair, Scenario
@@ -83,6 +83,52 @@ def actually_well_setup_evals_experiments(
 
             # We only need the ID for the job because the consumer will get the rest of the data from the DB -- no scenario info needed its baked into the evals.
             queue_job(tag, row[0])
+
+
+@flow
+def process_eval_experiment_from_queue(
+    tag: str = "g_eval_comparison_experiment_2", limit: int = 15
+):
+    logger = get_run_logger()
+    q = get_queue(tag)
+    db = get_db()
+
+    ec = EvaluationController()
+
+    for i in range(limit):
+        job = q.get()
+        logger.info(f"📋 Job: {job.data}")
+        qapair = get_answer_by_id(db, job.data)
+
+        # TODO we're using slightly different keys for evals! The DB JSONB field will have "-" concatentation, but the evals will have "_" or some other key. We should standardize this.
+        to_evaluate = []
+        if "g_eval-faithfulness_gpt4o" not in qapair.evals:
+            to_evaluate.append("g_eval_faithfulness_gpt4o")
+        if "g_eval-faithfulness_gemini" not in qapair.evals:
+            to_evaluate.append("g_eval_faithfulness_gemini")
+        if "g_eval-faithfulness_llama3" not in qapair.evals:
+            to_evaluate.append("g_eval_faithfulness_llama3")
+        if "patronus_lynx-faithfulness" not in qapair.evals:
+            to_evaluate.append("patronus_lynx")
+        if "vectara-faithfulness" not in qapair.evals:
+            to_evaluate.append("vectara")
+
+        if len(to_evaluate) > 0:
+            logger.info(f"📋 Evaluating {to_evaluate} evals for {qapair.id}")
+
+            ec.set_evaluators(to_evaluate)
+
+            result = ec.evaluate_all(qapair.to_end_to_end_generation())
+
+            logger.info(f"📋 Result: {result}")
+
+            for score in result:
+                qapair.evals[f"{score.name}-{score.type}"] = score.model_dump_json()
+
+            logger.info(f"📋 Evaluations: {qapair.evals}")
+
+        qapair.pipeline_id = tag  # type: ignore
+        qapair.save()
 
 
 @flow
@@ -177,4 +223,4 @@ def process_faithfulness_experiment_answer_job(
 
 
 if __name__ == "__main__":
-    actually_well_setup_evals_experiments()
+    process_eval_experiment_from_queue()

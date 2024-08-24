@@ -13,7 +13,6 @@ from src.flows.tasks.data_tasks import (
     get_unanswered_queries,
     get_query_by_id,
 )
-from src.flows.generate_evals_flow import evaluate_system_response
 from src.flows.queue import queue_job, get_queue
 
 
@@ -111,9 +110,7 @@ def generate_answer_full(
     result = generate_answer_task(query, scenario, tag, rc)
 
     # Save to database
-    qa_pair = save_answer(tag, result, db, query)
-
-    evaluate_system_response(qa_pair)
+    save_answer(tag, result, db, query)
 
 
 @flow
