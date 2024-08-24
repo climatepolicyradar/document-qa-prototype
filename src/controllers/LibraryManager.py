@@ -1,5 +1,9 @@
+import json
 import requests
 from src.flows.utils import get_secret
+from src.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class LibraryManager:
@@ -18,12 +22,14 @@ class LibraryManager:
         self, document_id: str, text_block_ids: list[int]
     ) -> dict:
         """Get metadata for a given citation."""
-        text_block_ids_str = ",".join(map(str, text_block_ids))
+        base_joined_ids = "','".join(map(str, text_block_ids))
+        text_block_ids_str = f"'{base_joined_ids}'"
         url = f"{self.base_url}/full_text/-/query.json"
         params = {
-            "sql": f"select id, document_id, text_block_id, text, language, type, type_confidence, coords, page_number from text_blocks where document_id = :document_id and text_block_id in ({text_block_ids_str}) order by id limit 101",
+            "sql": f"select id, document_id, text_block_id, text, language, type, type_confidence, coords, page_number from text_blocks where document_id = :document_id and text_block_id in ({text_block_ids_str}) order by id limit 10",
             "document_id": document_id,
         }
+        print(params)
         response = requests.get(url, headers=self._get_headers(), params=params)
         response.raise_for_status()
         return response.json()["rows"]
@@ -37,7 +43,25 @@ class LibraryManager:
         }
         response = requests.get(url, headers=self._get_headers(), params=params)
         response.raise_for_status()
-        return response.json()["rows"][0]
+        json_result = response.json()["rows"][0]
+
+        # Pre JSON load the "languages", "topic", "hazard", "sector", "keyword", "framework", "instrument" fields
+        for field in [
+            "languages",
+            "topic",
+            "hazard",
+            "sector",
+            "keyword",
+            "framework",
+            "instrument",
+        ]:
+            try:
+                json_result[field] = json.loads(json_result[field])
+            except Exception:
+                logger.error(f"Error loading {field} for document {document_id}")
+                pass
+
+        return json_result
 
     def get_text_blocks_around(
         self, document_id: str, text_block_id: int, N: int

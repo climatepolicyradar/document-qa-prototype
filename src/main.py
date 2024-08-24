@@ -1,6 +1,7 @@
 import asyncio
 import json
 from anyio import Path
+from pydantic import BaseModel
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,7 +12,7 @@ from src.controllers.EvaluationController import EvaluationController
 from src.controllers.RagController import RagController
 from src.controllers.ScenarioController import ScenarioController
 from src.logger import get_logger
-from src.models.data_models import RAGRequest
+from src.models.data_models import EndToEndGeneration, RAGRequest
 from src.online.inference import LLMTypes
 from src import config
 from src.models.data_models import QAPair
@@ -145,15 +146,6 @@ def get_documents():
     return metadata
 
 
-@app.get("/documents/{document_id}")
-def get_document(document_id: str):
-    """Returns a document and its metadata available for the tool"""
-    metadata_path = Path("data/document_metadata.json")
-    with open(metadata_path, "r") as f:
-        metadata = json.load(f)
-    return [d for d in metadata if d["id"] == document_id][0]
-
-
 @app.websocket("/ws/stream_rag/")
 async def stream_rag(websocket: WebSocket):
     """Stream RAG (Retrieval-Augmented Generation) on a document."""
@@ -244,12 +236,30 @@ async def get_highlights(source_id: str):
     return highlights
 
 
-@app.post("/evaluate/{source_id}")
+@app.post("/evaluate-all/{source_id}")
 async def evaluate(source_id: str):
     """Evaluate an answer."""
     qa_pair = QAPair.get_by_source_id(source_id)
     gen_model = qa_pair.to_end_to_end_generation()
 
     evals = await ec.evaluate_async(gen_model)
-    print(evals)
     return evals
+
+
+class EvaluateSingleRequest(BaseModel):
+    """A quick request data model for evaluating a single answer."""
+
+    query: str
+    answer: str
+    context: list[str]
+
+
+@app.post("/evaluate/{eval_id}")
+def evaluate_single(eval_id: str, query: EvaluateSingleRequest):
+    """Evaluate a single answer. Optimising for parallel calls from the frontend."""
+    gen_model = EndToEndGeneration.simple_holder(
+        query=query.query,
+        answer=query.answer,
+        context=query.context,
+    )
+    return gen_model

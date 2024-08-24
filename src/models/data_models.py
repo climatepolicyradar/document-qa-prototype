@@ -469,6 +469,24 @@ class EndToEndGeneration(BaseModel):
             f"EndToEndGeneration({self.rag_request.query}, {self.rag_response.__str__})"
         )
 
+    @classmethod
+    def simple_holder(cls, query: str, answer: str, context: list[str]):
+        """Returns an E2E model with just query, answer, and context string"""
+        return cls(
+            config={},
+            rag_request=RAGRequest(
+                query=query,
+                document_id="",
+            ),
+            rag_response=RAGResponse(
+                text=answer,
+                retrieved_documents=context,  # type: ignore
+                query=query,
+            ),
+            error=None,
+            uuid=str(uuid.uuid4()),
+        )
+
     def get_answer(self, remove_cot: bool = True) -> str:
         """Returns the answer from the RAG response. If remove_cot is True, the inner monologue is removed before returning, otherwise the full response is returned."""
         if self.rag_response is None:
