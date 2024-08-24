@@ -1,4 +1,3 @@
-import asyncio
 import json
 from anyio import Path
 from pydantic import BaseModel
@@ -12,10 +11,11 @@ from src.controllers.EvaluationController import EvaluationController
 from src.controllers.RagController import RagController
 from src.controllers.ScenarioController import ScenarioController
 from src.logger import get_logger
-from src.models.data_models import EndToEndGeneration, RAGRequest
+from src.models.data_models import RAGRequest
 from src.online.inference import LLMTypes
 from src import config
 from src.models.data_models import QAPair
+from src.services.HighlightService import HighlightService
 
 config.logger.info("Here we go yo")  # I just want ruff to stop removing my import.
 
@@ -110,8 +110,6 @@ def do_rag(request: RAGRequest) -> dict:
         query=request.query, scenario=request.as_scenario(dc)
     )
 
-    result.rag_response.metadata["responded"] = not result.rag_response.refused_answer()
-
     if result.rag_response.refused_answer():
         result = app_context["rag_controller"].execute_no_answer_flow(result)
 
@@ -184,56 +182,12 @@ async def get_highlights(source_id: str):
 
     assert gen_model.rag_response is not None, "RAG response is None"
 
-    assertions = app_context["rag_controller"].extract_assertions_from_answer(
-        gen_model.get_answer()
-    )
+    hs = HighlightService()
 
-    LOGGER.info(gen_model.rag_request.query)
-    LOGGER.info(gen_model.rag_request.document_id)
-
-    async def process_assertion(assertion):
-        return {
-            "citations": assertion.citations,
-            "answerSubstring": assertion.assertion,
-            "uuid": assertion.uuid,
-            "citationSubstring": await app_context[
-                "rag_controller"
-            ].highlight_key_quotes(
-                gen_model.rag_request.query,
-                assertion,
-                gen_model.rag_response.retrieved_documents,  # type: ignore
-            ),
-        }
-
-    LOGGER.info("🚀 Launching parallel highlight processing")
-    all_assertions = [
-        atomic
-        for assertion in assertions
-        for atomic in assertion.to_atomic_assertions()
-    ]
-
-    highlights = await asyncio.gather(
-        *[process_assertion(assertion) for assertion in all_assertions]
-    )
-
-    LOGGER.info("🧠 Consolidating highlights by UUID")
-    consolidated_highlights = {}
-    for highlight in highlights:
-        uuid = highlight["uuid"]
-        if uuid not in consolidated_highlights:
-            consolidated_highlights[uuid] = {
-                "answerSubstring": highlight["answerSubstring"],
-                "citationSubstrings": {},
-            }
-        consolidated_highlights[uuid]["citationSubstrings"][
-            highlight["citations"][0]
-        ] = highlight["citationSubstring"]
-
-    highlights = list(consolidated_highlights.values())
-    LOGGER.info(f"🎭 Consolidated {len(highlights)} unique assertions")
-    LOGGER.info(f"✅ Processed {len(highlights)} highlights in parallel")
-
-    return highlights
+    return hs.highlight_key_quotes(
+        gen_model.rag_response.query,
+        gen_model.processed_generation_data.assertions,  # type: ignore
+    )  # type: ignore
 
 
 @app.post("/evaluate-all/{source_id}")
@@ -257,9 +211,4 @@ class EvaluateSingleRequest(BaseModel):
 @app.post("/evaluate/{eval_id}")
 def evaluate_single(eval_id: str, query: EvaluateSingleRequest):
     """Evaluate a single answer. Optimising for parallel calls from the frontend."""
-    gen_model = EndToEndGeneration.simple_holder(
-        query=query.query,
-        answer=query.answer,
-        context=query.context,
-    )
-    return gen_model
+    pass

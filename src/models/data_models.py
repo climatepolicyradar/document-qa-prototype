@@ -2,10 +2,11 @@ from enum import Enum
 import json
 import jinja2
 from pydantic import BaseModel, ConfigDict, model_validator
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
 import datetime
 from wandb.sdk.data_types.trace_tree import Trace
 from cpr_data_access.models import BaseDocument
+
 from langchain_core.prompts import ChatPromptTemplate
 from peewee import (
     Model,
@@ -17,6 +18,7 @@ from peewee import (
     ForeignKeyField,
 )
 from playhouse.postgres_ext import BinaryJSONField
+from src.controllers.LibraryManager import LibraryManager
 from src.controllers.DocumentController import DocumentController
 from src.flows.utils import get_db
 
@@ -33,7 +35,6 @@ from src.prompts.template_building import (
     system_prompt,
 )
 from src.config import root_templates_folder
-from src.services.TextManipulationService import TextManipulationService
 
 
 try:
@@ -314,6 +315,20 @@ class RAGRequest(BaseModel):
         )
 
 
+def refused_answer(text: str = "") -> bool:
+    """
+    Whether the model refused to answer the question.
+
+    Use heuristics on the generated text to determine this.
+    """
+    refusal_phrases = ["do not provide information", "cannot provide an answer"]
+
+    if any(phrase in text.lower() for phrase in refusal_phrases):
+        return True
+
+    return False
+
+
 class RAGResponse(BaseModel):
     """Response object for the RAG pipeline"""
 
@@ -321,7 +336,7 @@ class RAGResponse(BaseModel):
     retrieved_documents: list[dict]
     query: str
     highlights: Optional[list[str]] = None
-    metadata: Optional[dict] = None
+    metadata: dict = {}
 
     # LangChain uses pydantic v1 internally, so can't pass LangChainDocuments here
 
@@ -342,17 +357,7 @@ class RAGResponse(BaseModel):
 
         Use heuristics on the generated text to determine this.
         """
-
-        refusal_phrases = ["do not provide information", "cannot provide an answer"]
-
-        if any(phrase in self.text.lower() for phrase in refusal_phrases):
-            return True
-
-        return False
-
-    def extract_inner_monologue(self) -> dict:
-        """Extract the inner monologue from the answer"""
-        return TextManipulationService.strip_inner_ai_monologue(self.text)
+        return refused_answer(self.text)
 
     def retrieved_passages_as_string(self) -> str:
         """Returns a string representation of the retrieved passages."""
@@ -378,12 +383,35 @@ class RAGResponse(BaseModel):
             for idx, window_text in enumerate(window_texts)
         )
 
+    def augment_passages_with_metadata(self, document_id: str):
+        """Adds in page numbers (and TODO other metadata as context string) to the retrieved passages"""
+        lm = LibraryManager()
+        ids = [item["metadata"]["text_block_id"] for item in self.retrieved_documents]
+        data = lm.get_metadata_for_citation(document_id, ids)
+
+        for item in self.retrieved_documents:
+            api_item = [
+                i
+                for i in data
+                if i["text_block_id"] == item["metadata"]["text_block_id"]
+            ][0]
+            item["metadata"]["page_number"] = api_item["page_number"]
+
+
+class Citation(BaseModel):
+    """Represents a single evidence retrieved passage and its citation index in the LLM response"""
+
+    citation_idx: int
+    cited: bool = True
+    text: str
+    highlight: str = ""
+
 
 class AssertionModel(BaseModel):
     """Model for assertions extracted from RAG responses."""
 
     assertion: str
-    citations: list[str]
+    citations: list[Citation]
     uuid: Optional[str] = ""
 
     @model_validator(mode="before")
@@ -395,35 +423,29 @@ class AssertionModel(BaseModel):
         assert "citations" in data, "Citations must be provided"
         assert isinstance(
             data["citations"], list
-        ), "Citations must be a list of strings"
+        ), "Citations must be a list of Citations"
 
         if "uuid" not in data:
             data["uuid"] = str(uuid.uuid4())
         return data
 
-    def to_atomic_assertions(self) -> list["AssertionModel"]:
-        """Returns a list of AssertionModels with a single assertion and a single citation representing all assertion<->citation pairs (e.g. thing [1,2] returns thing [1] and thing [2])"""
-        atomic_assertions = []
-
-        for citation in self.citations:
-            atomic_assertion = AssertionModel(
-                assertion=self.assertion,
-                citations=[citation],
-                uuid=self.uuid,  # Use for parent
-            )
-            atomic_assertions.append(atomic_assertion)
-
-        assert len(atomic_assertions) > 0, "No atomic assertions created"
-
-        return atomic_assertions
-
     def citations_as_string(self) -> str:
         """Returns a string representation of the citations."""
-        return ",\n".join(self.citations)
+        return ",\n".join([citation.text for citation in self.citations])
 
     def __str__(self) -> str:
         """Returns a string representation of the AssertionModel object."""
         return f"AssertionModel(assertion={self.assertion}, citations={self.citations})"
+
+
+class ProcessedGenerationData(BaseModel):
+    """Processed generation data"""
+
+    final_answer: str
+    inner_monologue: str
+    assertions: list[AssertionModel]
+    cited_documents: list[Citation]
+    other_documents: list[Citation]
 
 
 class EndToEndGeneration(BaseModel):
@@ -436,6 +458,7 @@ class EndToEndGeneration(BaseModel):
     config: dict
     rag_request: RAGRequest
     rag_response: Optional[RAGResponse] = None
+    processed_generation_data: Optional[ProcessedGenerationData] = None
     error: Optional[str] = None
     uuid: Optional[str] = None
 
@@ -451,9 +474,56 @@ class EndToEndGeneration(BaseModel):
             return ""
 
         if remove_cot:
-            return self.rag_response.extract_inner_monologue()["answer"]
+            return self.extract_inner_monologue()[1]
 
         return self.rag_response.text
+
+    def extract_inner_monologue(self) -> Tuple[str, str]:
+        """
+        Extract the inner monologue from the RAG answer. Inner monologue is the text between #COT# and #/COT#.
+
+        TODO Work out how to do this without duplicating code with builder cos its inelegant. But tired soz.
+        """
+        if self.rag_response is None:
+            raise ValueError("RAG response is None")
+
+        try:
+            # Some quick LLMS ARE UNRULY CHILDREN checks
+            if "# /COT#" in self.rag_response.text:
+                self.rag_response.text = self.rag_response.text.replace(
+                    "# /COT#", "#/COT#"
+                )
+            if "#/COT #" in self.rag_response.text:
+                self.rag_response.text = self.rag_response.text.replace(
+                    "#/COT #", "#/COT#"
+                )
+
+            if "#COT#" in self.rag_response.text and "#/COT#" in self.rag_response.text:
+                return (
+                    self.rag_response.text.split("#COT#")[1].split("#/COT#")[0],
+                    self.rag_response.text.split("#/COT#")[1],
+                )
+            else:
+                return ("", self.rag_response.text)
+        except Exception:
+            return ("", self.rag_response.text)
+
+    def add_metadata(self, key: str, value: Any):
+        """Adds a key-value pair to the metadata dictionary."""
+        if self.rag_response is None:
+            raise ValueError("RAG response is None")
+        self.rag_response.metadata[key] = value
+        return self
+
+    def add_metadata_list_item(self, key: str, value: Any):
+        """Adds a value to a list in the metadata dictionary."""
+        if self.rag_response is None:
+            raise ValueError("RAG response is None")
+
+        if self.rag_response.metadata.get(key) is None:
+            self.rag_response.metadata[key] = []
+        self.rag_response.metadata[key].append(value)
+        return self
 
     @model_validator(mode="before")
     @classmethod
