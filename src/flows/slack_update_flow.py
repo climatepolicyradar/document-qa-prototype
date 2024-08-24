@@ -30,7 +30,7 @@ def get_experiment_queue_status(tag: str):
 
 
 async def get_flow_stats(flow_names: list[str]):
-    with get_client() as client:
+    async with get_client() as client:
         for flow_name in flow_names:
             flows = await client.read_flows(
                 flow_filter=FlowFilter(name={"any_": [flow_name]})

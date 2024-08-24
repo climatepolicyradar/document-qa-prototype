@@ -68,7 +68,7 @@ def queue_answer_tasks(
 
 @flow
 def process_answer_job_from_queue(
-    tag: str = "prompt-answer-experiment", limit: int = 15
+    tag: str = "main_experiment_run_2024_08_24", limit: int = 15
 ):
     db = get_db()
     logger = get_run_logger()

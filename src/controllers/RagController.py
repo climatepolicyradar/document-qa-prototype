@@ -30,6 +30,7 @@ import re
 
 from src.online.pipeline import rag_chain, streamable_rag_chain
 from src import config
+from src.services.TextManipulationService import TextManipulationService
 
 
 LOGGER = get_logger(__name__)
@@ -212,7 +213,13 @@ class RagController:
             },
         )
 
-        response_text = response["answer"]
+        response_elements = TextManipulationService.strip_inner_ai_monologue(
+            response["answer"]
+        )
+
+        response_text = response_elements["answer"]
+        output_metadata["ai_monologue"] = response_elements["inner_monologue"]
+
         LOGGER.info(f"Response: {response_text}")
 
         end_time = datetime.now()
@@ -230,7 +237,10 @@ class RagController:
         retrieved_documents_as_dicts = [d.dict() for d in response["documents"]]
 
         # If assertions are present, reorder the documents to put the cited documents first
-        if output_metadata.get("assertions") is not None:
+        if (
+            output_metadata.get("assertions") is not None
+            and len(retrieved_documents_as_dicts) > 0
+        ):
             idxs_of_cited_documents = get_unique_citations(
                 output_metadata["assertions"]
             )

@@ -156,6 +156,8 @@ class CPRVespaRetriever(VespaRetriever):
                     }
                 metadata["id"] = child["id"]
                 docs.append(Document(page_content=page_content, metadata=metadata))
+
+        LOGGER.info(f"Retrieved from vespa {len(docs)} docs")
         return docs
 
     def _get_relevant_documents(

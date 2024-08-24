@@ -17,7 +17,6 @@ from peewee import (
     ForeignKeyField,
 )
 from playhouse.postgres_ext import BinaryJSONField
-from src.controllers.LibraryManager import LibraryManager
 from src.controllers.DocumentController import DocumentController
 from src.flows.utils import get_db
 
@@ -34,6 +33,7 @@ from src.prompts.template_building import (
     system_prompt,
 )
 from src.config import root_templates_folder
+from src.services.TextManipulationService import TextManipulationService
 
 
 try:
@@ -351,18 +351,8 @@ class RAGResponse(BaseModel):
         return False
 
     def extract_inner_monologue(self) -> dict:
-        """Extract the inner monologue from the RAG answer. Inner monologue is the text between #COT# and #/COT#"""
-        result = {
-            "inner_monologue": "",
-            "answer": "",
-        }
-        if "#COT#" in self.text and "#/COT#" in self.text:
-            result["inner_monologue"] = self.text.split("#COT#")[1].split("#/COT#")[0]
-            result["answer"] = self.text.split("#/COT#")[1]
-        else:
-            result["answer"] = self.text
-
-        return result
+        """Extract the inner monologue from the answer"""
+        return TextManipulationService.strip_inner_ai_monologue(self.text)
 
     def retrieved_passages_as_string(self) -> str:
         """Returns a string representation of the retrieved passages."""
@@ -387,20 +377,6 @@ class RAGResponse(BaseModel):
             f"**[{idx}]**\n {window_text}"
             for idx, window_text in enumerate(window_texts)
         )
-
-    def augment_passages_with_metadata(self, document_id: str):
-        """Adds in page numbers (and TODO other metadata as context string) to the retrieved passages"""
-        lm = LibraryManager()
-        ids = [item["metadata"]["text_block_id"] for item in self.retrieved_documents]
-        data = lm.get_metadata_for_citation(document_id, ids)
-
-        for item in self.retrieved_documents:
-            api_item = [
-                i
-                for i in data
-                if i["text_block_id"] == item["metadata"]["text_block_id"]
-            ][0]
-            item["metadata"]["page_number"] = api_item["page_number"]
 
 
 class AssertionModel(BaseModel):
@@ -467,24 +443,6 @@ class EndToEndGeneration(BaseModel):
         """Returns a string representation of the EndToEndGeneration object."""
         return (
             f"EndToEndGeneration({self.rag_request.query}, {self.rag_response.__str__})"
-        )
-
-    @classmethod
-    def simple_holder(cls, query: str, answer: str, context: list[str]):
-        """Returns an E2E model with just query, answer, and context string"""
-        return cls(
-            config={},
-            rag_request=RAGRequest(
-                query=query,
-                document_id="",
-            ),
-            rag_response=RAGResponse(
-                text=answer,
-                retrieved_documents=context,  # type: ignore
-                query=query,
-            ),
-            error=None,
-            uuid=str(uuid.uuid4()),
         )
 
     def get_answer(self, remove_cot: bool = True) -> str:
