@@ -407,6 +407,14 @@ class RagController:
 
         return response
 
+    @staticmethod
+    def process_extracted_topics(topics: str) -> list[str]:
+        """Process the extracted topics from the no answer flow."""
+
+        topics_split = topics.lower().replace("-–", "").strip().split("\n")
+
+        return topics_split
+
     def execute_no_answer_flow(self, result: EndToEndGeneration) -> EndToEndGeneration:
         """Used to generate the information for no answer flows"""
 
@@ -426,8 +434,28 @@ class RagController:
             scenario, {"query_str": result.rag_response.retrieved_passages_as_string()}
         )
 
+        scenario = Scenario(
+            prompt=Prompt.from_template(
+                "response/generate_topics_from_retrieved_documents"
+            ),
+            model="mistral-nemo",
+            generation_engine=LLMTypes.VERTEX_AI.value,
+        )
+
+        retrieved_passages_joined = " ".join(
+            [doc["page_content"] for doc in result.rag_response.retrieved_documents]
+        )
+
+        topics = self.run_llm(scenario, {"context_str": retrieved_passages_joined})
+
+        try:
+            topics_list = self.process_extracted_topics(topics)
+        except Exception:
+            topics_list = []
+
         LOGGER.info(f"🔍 System summarised the query: {summary}")
         result.rag_response.add_metadata("no_answer_summary", summary)
+        result.rag_response.add_metadata("no_answer_topics", topics_list)
         result.rag_response.add_metadata(
             "no_answer_assertions", self.extract_assertions_from_answer(summary)
         )
