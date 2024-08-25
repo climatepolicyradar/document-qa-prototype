@@ -16,6 +16,7 @@ from peewee import (
     UUIDField,
     DateTimeField,
     ForeignKeyField,
+    BooleanField,
 )
 from playhouse.postgres_ext import BinaryJSONField
 from src.controllers.LibraryManager import LibraryManager
@@ -218,6 +219,38 @@ class DBQuery(Model):
         database = db
 
 
+class Notebook(Model):
+    """Represents a notebook in the database."""
+
+    id = AutoField()
+    uuid = UUIDField(null=True)
+    name = CharField()
+    created_at = DateTimeField(default=datetime.datetime.now)
+    updated_at = DateTimeField(default=datetime.datetime.now)
+    is_shared = BooleanField(default=False)
+    is_deleted = BooleanField(default=False)
+
+    @staticmethod
+    def get_by_uuid(uuid: str) -> "Notebook":
+        """Returns a Notebook object by uuid."""
+        return (
+            Notebook.select()
+            .where(Notebook.uuid == uuid)
+            .where(Notebook.is_deleted == False)  # noqa:E712
+            .first()
+        )
+
+    @staticmethod
+    def create_new_notebook(name: str) -> "Notebook":
+        """Creates a new notebook."""
+        return Notebook(name=name, uuid=str(uuid.uuid4()))
+
+    class Meta:
+        """Set DB for the model"""
+
+        database = db
+
+
 class QAPair(Model):
     """Represents a Question-Answer pair in the database."""
 
@@ -235,12 +268,17 @@ class QAPair(Model):
     status = CharField(null=True)
     created_at = DateTimeField(default=datetime.datetime.now)
     updated_at = DateTimeField(default=datetime.datetime.now)
+    notebook_id = ForeignKeyField(Notebook, null=True)
     generation = BinaryJSONField(null=True)  # serialized EndToEndGeneration
 
     class Meta:
         """Set DB for the model"""
 
         database = db
+
+    def is_part_of_notebook(self) -> bool:
+        """Returns True if the QAPair is part of a notebook."""
+        return self.notebook_id is not None
 
     @classmethod
     def get_by_source_id(cls, source_id: str) -> "QAPair":
@@ -262,7 +300,7 @@ class QAPair(Model):
             if generation.rag_response
             else {},
             source_id=generation.uuid,
-            generation=generation.model_dump_json(serialize_as_any=True),
+            generation=generation.model_dump_json(),
         )
 
     def to_end_to_end_generation(self) -> "EndToEndGeneration":
@@ -298,6 +336,7 @@ class RAGRequest(BaseModel):
     prompt_template: str = "FAITHFULQA_SCHIMANSKI_CITATION_QA_TEMPLATE_MODIFIED"
     retrieval_window: int = 1
     config: Optional[str] = "src/configs/answer_config.yaml"
+    notebook_uuid: Optional[str] = None
 
     def as_scenario(self, dc: DocumentController) -> Scenario:
         """Returns the RAGRequest as a Scenario object."""

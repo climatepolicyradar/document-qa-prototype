@@ -7,6 +7,7 @@ from src.logger import get_logger
 import requests
 from typing import Dict
 from pydantic import BaseModel, Field
+import json
 
 assert config
 
@@ -24,6 +25,22 @@ class GuardrailValidationResponse(BaseModel):
 
     overall_result: bool
     individual_results: Dict[str, bool]
+
+    def to_json(self):
+        """Convert the response to JSON."""
+        return {
+            "overall_result": self.overall_result,
+            "individual_results": self.individual_results,
+        }
+
+
+# Monkey-patch the JSONEncoder (peewee basically has trouble serialising basemodels)
+def _default(self, obj):
+    return getattr(obj.__class__, "to_json", _default.default)(obj)  # type: ignore
+
+
+_default.default = json.JSONEncoder().default
+json.JSONEncoder.default = _default  # type: ignore
 
 
 class GuardrailController:
