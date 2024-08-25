@@ -8,7 +8,9 @@ from src.models.data_models import AssertionModel
 class HighlightService:
     """Service for interacting with the highlighting microservice."""
 
-    def __init__(self, base_url: str = "http://localhost:8000"):
+    def __init__(
+        self, base_url: str = "https://highlights-api.labs.climatepolicyradar.org"
+    ):
         """Initialize the HighlightService."""
         self.base_url = base_url
 
