@@ -77,9 +77,19 @@ def process_answer_job_from_queue(
     q = get_queue(tag)
 
     for i in range(limit):
-        job = q.get()
+        job = q.get(block=False)
+        if job is None:
+            logger.info("📋 Could not get job from queue")
+            break
+
         logger.info(f"📋 Job: {job}")
         logger.info(f"📋 Job scenario: {job.data}")
+
+        if job.data["generation_engine"] == "openai":
+            logger.warning(
+                f"Skipping job {job.data['query_id']} because generation engine is openai"
+            )
+            continue
 
         scenario = Scenario(
             model=job.data["model"],
@@ -131,9 +141,10 @@ def queue_answer_flow(
 
 
 def main(tag: str, config: str, query_tag: str, only_new: bool):
-    # process_answer_job_from_queue(tag, limit=2)
+    process_answer_job_from_queue(tag, limit=2)
+    #
     # spawn_answer_tasks(tag, limit=2)
-    queue_answer_flow(config, tag, query_tag, only_new)
+    # queue_answer_flow(config, tag, query_tag, only_new)
 
 
 if __name__ == "__main__":

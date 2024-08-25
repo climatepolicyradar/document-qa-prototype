@@ -114,19 +114,29 @@ class EndToEndGenerationBuilder:
         assertions_and_indices = self._get_cited_document_indices_in_answer(answer)
 
         if self.has_documents():
+            unique_indices = set(
+                [
+                    index
+                    for assertion_and_index in assertions_and_indices
+                    for index in assertion_and_index[1]
+                ]
+            )
             self.cited_documents = [
                 Citation(
                     citation_idx=int(index),
                     cited=True,
                     text=self.retrieved_documents[int(index)]["page_content"],
                 )
-                for assertion_and_index in assertions_and_indices
-                for index in assertion_and_index[1]
+                for index in unique_indices
             ]
+            logger.info(f"CITED DOCUMENTS: {self.cited_documents}")
             for i, doc in enumerate(self.retrieved_documents):
-                if i not in [
+                doc["citation_idx"] = i
+                doc["cited"] = i in [
                     citation.citation_idx for citation in self.cited_documents
-                ]:
+                ]
+
+                if not doc["cited"]:
                     self.other_documents.append(
                         Citation(
                             citation_idx=i,
@@ -205,4 +215,5 @@ class EndToEndGenerationBuilder:
             self.add_metadata_list_item("errors", "Could not extract assertions")
             results = []
 
+        logger.info(f"CITED DOCUMENT INDICES: {results}")
         return results
