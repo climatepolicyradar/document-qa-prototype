@@ -1,11 +1,11 @@
 import json
 from typing import Optional
-from src.controllers.RagController import RagController
 from src.evaluation.evaluator import Evaluator, Score
 from src.models.data_models import EndToEndGeneration
 from src.prompts.template_building import jinja_template_loader
 from src.controllers.EvaluationController import evaluators
 from src.logger import get_logger
+from src.online.inference import get_llm
 
 
 import src.config as config
@@ -22,7 +22,7 @@ class PatronusLynx(Evaluator):
 
     def __init__(self, *args):
         super().__init__(*args)
-        self.model = RagController().get_llm("vertexai", "patronus-lynx")
+        self.model = get_llm("vertexai", "patronus-lynx")
         self.template = jinja_template_loader(
             config.evaluation_templates_folder / "patronus_lynx.txt"
         )

@@ -1,5 +1,5 @@
 import sys
-from src.flows.slack_update_flow import generate_update
+from src.flows.generate_answers_flow import process_answer_job_from_queue
 import dotenv
 import os
 from prefect.blocks.system import JSON
@@ -13,7 +13,7 @@ DEFAULT_JOB_VARIABLES["memory"] = 8192
 DOCKER_REGISTRY = os.getenv("DOCKER_REGISTRY")
 
 # Add flows here to deploy
-all_flows = [generate_update]
+all_flows = [process_answer_job_from_queue]
 
 base_image = DeploymentImage(
     name=f"{DOCKER_REGISTRY}/prefect-rag-labs",

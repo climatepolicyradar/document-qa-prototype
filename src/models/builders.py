@@ -91,7 +91,7 @@ class EndToEndGenerationBuilder:
                         citation_idx=idx,
                         cited=True,
                         text=self.retrieved_documents[idx]["page_content"]
-                        if idx < len(self.retrieved_documents)
+                        if idx in range(0, len(self.retrieved_documents))
                         else "",
                     )
                     for idx in assertion[1]
@@ -138,27 +138,24 @@ class EndToEndGenerationBuilder:
                 ]
             )
             logger.info(f"UNIQUE INDICES: {unique_indices}")
-            self.cited_documents = [
-                Citation(
-                    citation_idx=int(index),
-                    cited=True,
-                    text=self.retrieved_documents[int(index)]["page_content"],
-                )
-                for index in unique_indices
-            ]
-            logger.info(f"CITED DOCUMENTS: {self.cited_documents}")
-
             # Set up other documents list and mark which ones are cited
             for i, doc in enumerate(self.retrieved_documents):
                 doc["citation_idx"] = i
-                doc["cited"] = i in [
-                    citation.citation_idx for citation in self.cited_documents
-                ]
+                cited = True if (i + 1) in unique_indices else False
+                doc["cited"] = cited
+                if cited:
+                    self.cited_documents.append(
+                        Citation(
+                            citation_idx=(i + 1),
+                            cited=True,
+                            text=doc["page_content"],
+                        )
+                    )
 
-                if not doc["cited"]:
+                if not cited:
                     self.other_documents.append(
                         Citation(
-                            citation_idx=i,
+                            citation_idx=(i + 1),
                             cited=False,
                             text=doc["page_content"],
                         )

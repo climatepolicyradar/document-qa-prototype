@@ -59,6 +59,17 @@ def process_answer_job_from_queue(
     db = get_db()
     logger = get_run_logger()
     dc = DocumentController()
+    rc = RagController()
+    ec = EvaluationController()
+    ec.set_evaluators(
+        [
+            "formatting",
+            "g_eval_policy",
+            "g_eval_faithfulness_llama3",
+            "patronus_lynx",
+            "vectara",
+        ]
+    )
 
     for i in range(limit):
         job = get_queue_job(tag)
@@ -84,29 +95,22 @@ def process_answer_job_from_queue(
 
         query = get_query_by_id(db, job["query_id"])
 
-        generate_answer_full(query, scenario, db, tag, job["query_tag"])
+        generate_answer_full(query, scenario, db, tag, job["query_tag"], rc, ec)
 
         mark_job_done(tag, job["receipt_handle"])
 
 
-@task
 def generate_answer_full(
-    query: Query, scenario: Scenario, db: Database, tag: str, query_tag: str
+    query: Query,
+    scenario: Scenario,
+    db: Database,
+    tag: str,
+    query_tag: str,
+    rc: RagController,
+    ec: EvaluationController,
 ):
     logger = get_run_logger()
     dc = DocumentController()
-    rc = RagController()
-    ec = EvaluationController()
-    ec.set_evaluators(
-        [
-            "formatting",
-            "g_eval_policy",
-            "g_eval_faithfulness",
-            "g_eval_faithfulness_llama3",
-            "patronus_lynx",
-            "vectara",
-        ]
-    )
 
     assert query.document_id is not None, "Document ID is None"
     scenario.document = dc.create_base_document(str(query.document_id))
@@ -117,16 +121,17 @@ def generate_answer_full(
 
     # Save to database
     answer = save_answer(tag, result, db, query)
-    try:
-        result = ec.evaluate_all(result)
+    if not result.rag_response.refused_answer():  # type: ignore
+        try:
+            result = ec.evaluate_all(result)
 
-        for score in result:
-            answer.evals[f"{score.name}-{score.type}"] = score.model_dump_json()
+            for score in result:
+                answer.evals[f"{score.name}-{score.type}"] = score.model_dump_json()
 
-        logger.info(f"📋 Evaluations: {answer.evals}")
-        answer.save()
-    except Exception as e:
-        logger.error(f"🚨 Error evaluating answer: {e}")
+            logger.info(f"📋 Evaluations: {answer.evals}")
+            answer.save()
+        except Exception as e:
+            logger.error(f"🚨 Error evaluating answer: {e}")
 
     return result
 
@@ -144,7 +149,7 @@ def queue_answer_flow(config: str, tag: str, query_tag: str):
 
 
 def main(tag: str, config: str, query_tag: str):
-    process_answer_job_from_queue(tag, limit=2)
+    process_answer_job_from_queue(tag, limit=15)
     #
     # spawn_answer_tasks(tag, limit=2)
     # queue_answer_flow(config, tag, query_tag)
