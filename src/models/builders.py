@@ -90,7 +90,9 @@ class EndToEndGenerationBuilder:
                     Citation(
                         citation_idx=idx,
                         cited=True,
-                        text=self.retrieved_documents[idx]["page_content"],
+                        text=self.retrieved_documents[idx]["page_content"]
+                        if idx < len(self.retrieved_documents)
+                        else "",
                     )
                     for idx in assertion[1]
                 ],
