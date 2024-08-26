@@ -38,9 +38,24 @@ class NotebookController:
         if notebook is None:
             raise HTTPException(status_code=404, detail="Notebook not found")
 
+        if notebook.is_shared:
+            # Don't add to shared notebooks
+            return notebook
+
         notebook.save()
         new_answer.notebook_id = int(notebook.id)  # type: ignore
         new_answer.save()
+        return notebook
+
+    def share_notebook(self, notebook_uuid: str) -> Notebook:
+        """Shares a notebook."""
+        notebook = Notebook.get_by_uuid(notebook_uuid)
+
+        if notebook is None:
+            raise HTTPException(status_code=404, detail="Notebook not found")
+
+        notebook.is_shared = True  # type: ignore
+        notebook.save()
         return notebook
 
     def get_notebook_with_answers(self, notebook_uuid: str) -> Notebook:

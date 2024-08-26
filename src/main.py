@@ -214,15 +214,14 @@ async def evaluate(source_id: str):
     return evals
 
 
-class EvaluateSingleRequest(BaseModel):
-    """A quick request data model for evaluating a single answer."""
-
-    query: str
-    answer: str
-    context: list[str]
-
-
-@app.post("/evaluate/{eval_id}")
-def evaluate_single(eval_id: str, query: EvaluateSingleRequest):
+@app.post("/evaluate/{eval_id}/{source_id}")
+def evaluate_single(eval_id: str, source_id: str):
     """Evaluate a single answer. Optimising for parallel calls from the frontend."""
-    pass
+    qa_pair = QAPair.get_by_source_id(source_id)
+    gen_model = qa_pair.to_end_to_end_generation()
+
+    mini_ec = EvaluationController()
+    mini_ec.set_evaluators([eval_id])
+
+    evals = mini_ec.evaluate(gen_model, eval_id)
+    return evals
