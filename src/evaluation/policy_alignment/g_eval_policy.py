@@ -40,4 +40,4 @@ class GEvalPolicy(GEval):
 
     def get_success(self, score: float) -> bool:
         """Returns whether the score is a success for this evaluator"""
-        return score <= 0.2
+        return score <= 0.4

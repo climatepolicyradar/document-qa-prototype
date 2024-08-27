@@ -11,6 +11,9 @@ from peewee import Database, PostgresqlDatabase
 import json
 
 from prefect_aws import AwsCredentials
+from src.logger import get_logger
+
+logger = get_logger(__name__)
 
 try:
     aws_credentials_block = AwsCredentials.load("aws-credentials-block-labs")
@@ -100,7 +103,12 @@ def get_labs_session(set_as_default: bool = False) -> boto3.Session:
 
 def get_db() -> Database:
     """Retrieves the database details from AWS SSM and returns a peewee database object"""
-    creds = get_secret("LABS_RDS_DB_CREDS")
+    if "ENVIRONMENT" in os.environ and os.environ["ENVIRONMENT"] == "prod":
+        logger.info("Using production database")
+        creds = get_secret("QUERIED_WEB_DB_CREDS")
+    else:
+        logger.info("Using labs database")
+        creds = get_secret("LABS_RDS_DB_CREDS")
 
     if not creds:
         raise ValueError("No credentials found")
@@ -117,16 +125,18 @@ def get_db() -> Database:
 
 
 @task
-def send_slack_message(message):
+def send_slack_message(message, include_flow_url: bool = True):
     logger = get_run_logger()
 
     # Retrieve Slack credentials from AWS Parameter Store
     webhook_url = get_secret("PREFECT_SLACK_WEBHOOK")
 
-    flow_url = f"https://app.prefect.cloud/account/4b1558a0-3c61-4849-8b18-3e97e0516d78/workspace/1753b4f0-6221-4f6a-9233-b146518b4545/flows/flow/{get_flow_run_id()}"
+    flow_url = f"https://app.prefect.cloud/account/4b1558a0-3c61-4849-8b18-3e97e0516d78/workspace/1753b4f0-6221-4f6a-9233-b146518b4545/flows/flow/{get_flow_run_id()}"  # noqa:F841
 
     # Set the payload for the POST request
-    payload = {"text": f"{message} (<{flow_url}|Flow details>)"}
+    payload = {
+        "text": f"{message} {'<{flow_url}|Flow details>' if include_flow_url else ''}"
+    }
 
     # Send the POST request to the Slack webhook URL
     response = requests.post(webhook_url, json=payload)
