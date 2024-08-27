@@ -25,6 +25,7 @@ class DocumentController:
         document_data = self.get_metadata(document_id)
 
         logger.info(f"📄 Document: {document_data}")
+        print(document_data)
 
         document = BaseDocument(
             document_id=document_id,

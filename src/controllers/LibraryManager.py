@@ -43,6 +43,9 @@ class LibraryManager:
         }
         response = requests.get(url, headers=self._get_headers(), params=params)
         response.raise_for_status()
+        if len(response.json()["rows"]) == 0:
+            return {}
+
         json_result = response.json()["rows"][0]
 
         # Pre JSON load the "languages", "topic", "hazard", "sector", "keyword", "framework", "instrument" fields
