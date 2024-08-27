@@ -13,7 +13,7 @@ from src.flows.tasks.data_tasks import (
     get_unanswered_queries,
     get_query_by_id,
 )
-from src.flows.queue import queue_job, get_queue
+from src.flows.queue import get_queue_job, queue_job, mark_job_done
 
 
 @task
@@ -74,34 +74,33 @@ def process_answer_job_from_queue(
     logger = get_run_logger()
     dc = DocumentController()
 
-    q = get_queue(tag)
-
     for i in range(limit):
-        job = q.get(block=False)
+        job = get_queue_job(tag)
         if job is None:
             logger.info("📋 Could not get job from queue")
             break
 
         logger.info(f"📋 Job: {job}")
-        logger.info(f"📋 Job scenario: {job.data}")
 
-        if job.data["generation_engine"] == "openai":
+        if job["generation_engine"] == "openai":
             logger.warning(
-                f"Skipping job {job.data['query_id']} because generation engine is openai"
+                f"Skipping job {job['query_id']} because generation engine is openai"
             )
             continue
 
         scenario = Scenario(
-            model=job.data["model"],
-            prompt=Prompt.from_template(job.data["prompt"]),
-            generation_engine=job.data["generation_engine"],
-            src_config=job.data["src_config"],
-            document=dc.create_base_document(job.data["document_id"]),
+            model=job["model"],
+            prompt=Prompt.from_template(job["prompt"]),
+            generation_engine=job["generation_engine"],
+            src_config=job["src_config"],
+            document=dc.create_base_document(job["document_id"]),
         )
 
-        query = get_query_by_id(db, job.data["query_id"])
+        query = get_query_by_id(db, job["query_id"])
 
-        generate_answer_full(query, scenario, db, tag, job.data["query_tag"])
+        generate_answer_full(query, scenario, db, tag, job["query_tag"])
+
+        mark_job_done(tag, job["receipt_handle"])
 
 
 @task
@@ -153,7 +152,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--config",
         type=str,
-        default="src/configs/answer_config.yaml",
+        default="src/configs/experiment_MAIN_ANSWERS_1.0.yaml",
         help="Path to the config file",
     )
     parser.add_argument(

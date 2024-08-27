@@ -7,7 +7,8 @@ We pyright ignore the whole file because the prefect client isn't typed properly
 from prefect import flow
 from prefect import get_run_logger
 from prefect.server.schemas.filters import FlowFilter, FlowRunFilter
-from src.flows.utils import get_db, send_slack_message
+from src.flows.utils import send_slack_message
+from src.flows.queue import get_queue_attributes
 from prefect import get_client
 from prefect.client.schemas.objects import StateType
 from datetime import datetime, timedelta
@@ -15,17 +16,11 @@ import asyncio
 
 
 def get_experiment_queue_status(tag: str):
-    db = get_db()
-    null_cursor = db.execute_sql(
-        f"SELECT count(*) FROM public.queue WHERE dequeued_at is null AND q_name = '{tag}'"
-    )
-    not_null_cursor = db.execute_sql(
-        f"SELECT count(*) FROM public.queue WHERE dequeued_at is not null AND q_name = '{tag}'"
-    )
+    attributes = get_queue_attributes(tag)
 
     return {
-        "to_process": null_cursor.fetchone()[0],
-        "processed": not_null_cursor.fetchone()[0],
+        "to_process": attributes["ApproximateNumberOfMessages"],
+        "in_flight": attributes["ApproximateNumberOfMessagesNotVisible"],
     }
 
 
@@ -94,7 +89,7 @@ async def generate_update(
     for tag in tags:
         status = get_experiment_queue_status(tag)
         send_slack_message(
-            f"🤔 Queue for tag {tag} has {status['to_process']} to process and {status['processed']} processed",
+            f"🤔 Queue for tag {tag} has {status['to_process']} to process and {status['in_flight']} processing",
             include_flow_url=False,
         )
 

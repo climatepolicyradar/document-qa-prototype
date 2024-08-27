@@ -27,6 +27,8 @@ import hashlib
 
 import src.config as config
 from src.online.inference import LLMTypes
+from src.logger import get_logger
+
 
 from src.prompts.template_building import (
     get_citation_template,
@@ -35,6 +37,9 @@ from src.prompts.template_building import (
     system_prompt,
 )
 from src.config import root_templates_folder
+
+
+logger = get_logger(__name__)
 
 
 try:
@@ -253,9 +258,11 @@ class QAPair(Model):
             question=generation.rag_request.query,
             answer=generation.get_answer(False),
             evals={},
-            metadata={},
+            metadata=generation.rag_response.metadata
+            if generation.rag_response
+            else {},
             source_id=generation.uuid,
-            generation=generation.model_dump_json(),
+            generation=generation.model_dump_json(serialize_as_any=True),
         )
 
     def to_end_to_end_generation(self) -> "EndToEndGeneration":
@@ -540,17 +547,19 @@ class EndToEndGeneration(BaseModel):
 
     def to_db_model(self, tag: str, query_id: Optional[str] = None) -> QAPair:
         """Converts the EndToEndGeneration object to a QAPair object."""
+        logger.info(f"Saving generation {self.uuid} to database")
         return QAPair(
             document_id=self.rag_request.document_id,
             model=self.rag_request.model,
             prompt=self.rag_request.prompt_template,
             pipeline_id=tag,
+            source_id=self.uuid,
             question=self.rag_request.query,
             query_id=query_id,
             answer=self.get_answer(False),
             evals={},
             metadata={},
-            generation=json.dumps(self.model_dump()),
+            generation=json.dumps(self.model_dump(serialize_as_any=True)),
         )
 
 
