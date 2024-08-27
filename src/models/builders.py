@@ -70,6 +70,9 @@ class EndToEndGenerationBuilder:
 
     def get_answer(self) -> str:
         """Returns the answer."""
+        if not self.has_documents():
+            return self.no_response_default_answer
+
         return self.answer
 
     def set_answer(self, answer: str):
@@ -154,6 +157,16 @@ class EndToEndGenerationBuilder:
         """Sets the retrieved documents."""
         self.retrieved_documents = [d.dict() for d in retrieved_documents]
         return self
+
+    @property
+    def no_response_default_answer(self) -> str:
+        """
+        Default answer when no documents are retrieved.
+
+        This should trigger the answer refused logic in src.data_models.refused_answer
+        and in auto-eval.
+        """
+        return "I cannot provide an answer."
 
     def hydrate_from_rag_chain_response(self, rag_chain_response: dict):
         """Pulls in data from the rag chain response"""
