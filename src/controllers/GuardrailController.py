@@ -90,14 +90,11 @@ class GuardrailController:
 
         except requests.RequestException as e:
             LOGGER.error(f"❌ Guardrail API request failed: {str(e)}")
-            raise
+            raise e
         except ValueError as e:
             LOGGER.error(f"❌ Invalid response from Guardrail API: {str(e)}")
-            raise
+            raise e
 
     def __str__(self) -> str:
         """Returns a string representation of the GuardrailController."""
         return f"GuardrailController(api_url={self.api_url})"
-
-
-assert GuardrailController, "GuardrailController class must be defined"
