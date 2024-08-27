@@ -1,8 +1,11 @@
+# type: ignore
+# TODO REMOVE THIS. this file probably isn't going to be used anymore.
+# but if it does remove this and fix pyright.
 from prefect import flow, get_run_logger
 from src.controllers.DocumentController import DocumentController
 from src.controllers.RagController import RagController
 from src.controllers.EvaluationController import EvaluationController
-from src.flows.queue import get_queue, queue_job
+from src.flows.queue import queue_job, get_queue_job
 
 from src.flows.tasks.data_tasks import get_answer_by_id, save_answer, get_query_by_id
 from src.flows.tasks.qa_tasks import generate_answer_task
@@ -90,15 +93,14 @@ def process_eval_experiment_from_queue(
     tag: str = "g_eval_comparison_experiment_2", limit: int = 15
 ):
     logger = get_run_logger()
-    q = get_queue(tag)
     db = get_db()
 
     ec = EvaluationController()
 
     for i in range(limit):
-        job = q.get()
-        logger.info(f"📋 Job: {job.data}")
-        qapair = get_answer_by_id(db, job.data)
+        job = get_queue_job(tag)
+        logger.info(f"📋 Job: {job}")
+        qapair = get_answer_by_id(db, job)
 
         # TODO we're using slightly different keys for evals! The DB JSONB field will have "-" concatentation, but the evals will have "_" or some other key. We should standardize this.
         to_evaluate = []
@@ -183,22 +185,19 @@ def process_faithfulness_experiment_answer_job(
         ]
     )
 
-    q = get_queue(tag)
-
     for i in range(limit):
-        job = q.get()
+        job = get_queue_job(tag)
         logger.info(f"📋 Job: {job}")
-        logger.info(f"📋 Job scenario: {job.data}")
 
         scenario = Scenario(
-            model=job.data["model"],
-            prompt=Prompt.from_template(job.data["prompt"]),
-            generation_engine=job.data["generation_engine"],
-            src_config=job.data["src_config"],
-            document=dc.create_base_document(job.data["document_id"]),
+            model=job["model"],
+            prompt=Prompt.from_template(job["prompt"]),
+            generation_engine=job["generation_engine"],
+            src_config=job["src_config"],
+            document=dc.create_base_document(job["document_id"]),
         )
 
-        query = get_query_by_id(db, job.data["query_id"])
+        query = get_query_by_id(db, job["query_id"])
 
         logger.info(f"📋 Scenario: {scenario}")
         logger.info(f"💡 Generating answer for query: {query}")
