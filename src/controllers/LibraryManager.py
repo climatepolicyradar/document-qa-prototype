@@ -85,7 +85,7 @@ class LibraryManager:
         """Get the full text of a document."""
         url = f"{self.base_url}/full_text/-/query.json"
         params = {
-            "sql": "SELECT text_block_id, text, page_number FROM text_blocks WHERE document_id = :document_id ORDER BY CAST(REPLACE(tb.text_block_id, 'b', '') AS INTEGER)",
+            "sql": "SELECT text_block_id, text, page_number FROM text_blocks WHERE document_id = :document_id ORDER BY CAST(REPLACE(text_block_id, 'b', '') AS INTEGER)",
             "document_id": document_id,
         }
         response = requests.get(url, headers=self._get_headers(), params=params)
