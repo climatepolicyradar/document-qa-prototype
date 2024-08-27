@@ -16,6 +16,7 @@ Table notebooks:
 Addition to QAPair table:
 - notebook_id nullable
 """
+from typing import Optional
 from src.models.data_models import Notebook, QAPair
 from fastapi import HTTPException
 from src.logger import get_logger
@@ -27,7 +28,7 @@ class NotebookController:
     """Controller for interacting with notebooks."""
 
     def update_notebook(
-        self, notebook_uuid: str | None, new_answer: QAPair
+        self, notebook_uuid: Optional[str], new_answer: QAPair
     ) -> Notebook:
         """Updates the notebook with a new answer."""
         if notebook_uuid is None:

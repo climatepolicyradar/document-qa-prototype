@@ -28,16 +28,13 @@ class SummariseDocuments(LLMCommand):
             generation_engine=LLMTypes.VERTEX_AI.value,
         )
 
-        if (
-            end_to_end_generation.rag_response is None
-            or end_to_end_generation.rag_response.retrieved_documents is None
-        ):
+        if not end_to_end_generation.has_documents():
             return ""
 
         summary = self.rag_controller.run_llm(
             scenario,
             {
-                "query_str": end_to_end_generation.rag_response.retrieved_passages_as_string()
+                "query_str": end_to_end_generation.rag_response.retrieved_passages_as_string()  # type: ignore
             },
         )
 
@@ -57,16 +54,13 @@ class GetTopicsFromText(LLMCommand):
             generation_engine=LLMTypes.VERTEX_AI.value,
         )
 
-        if (
-            end_to_end_generation.rag_response is None
-            or end_to_end_generation.rag_response.retrieved_documents is None
-        ):
+        if not end_to_end_generation.has_documents():
             return []
 
         retrieved_passages_joined = " ".join(
             [
                 doc["page_content"]
-                for doc in end_to_end_generation.rag_response.retrieved_documents
+                for doc in end_to_end_generation.rag_response.retrieved_documents  # type: ignore
             ]
         )
 

@@ -28,11 +28,9 @@ def queue_all_answer_tasks(scenarios: list[Scenario], tag: str, query_tag: str):
     num_per_loop = 50
     while offset < len(queries):
         for scenario in scenarios:
-            limit = min(len(queries), num_per_loop)
-
-            for i, query in enumerate(queries[offset : offset + limit]):
+            for i, query in enumerate(queries[offset : offset + num_per_loop]):
                 logger.info(
-                    f"📋 Queueing job {i} of {limit} (offset {offset} of {len(queries)} total)"
+                    f"📋 Queueing job {i} of {num_per_loop} (offset {offset} of {len(queries)} total)"
                 )
                 queue_job(
                     tag,

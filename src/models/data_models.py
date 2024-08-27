@@ -528,6 +528,17 @@ class EndToEndGeneration(BaseModel):
 
         return self.rag_response.text
 
+    def has_response(self) -> bool:
+        """Returns True if the RAG response is not None."""
+        return self.rag_response is not None
+
+    def has_documents(self) -> bool:
+        """Returns True if the RAG response has documents."""
+        return (
+            self.rag_response is not None
+            and self.rag_response.retrieved_documents is not None
+        )
+
     def extract_inner_monologue(self) -> Tuple[str, str]:
         """
         Extract the inner monologue from the RAG answer. Inner monologue is the text between #COT# and #/COT#.
