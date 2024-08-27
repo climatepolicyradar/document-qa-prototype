@@ -41,7 +41,7 @@ class RagController:
         self.observability = ObservabilityManager()
         self.guardrails = GuardrailController()
         self.observe = False
-        # TODO self.observe = observe
+        self.observe = observe
 
     def get_llm(
         self, type: str, model: str, unfiltered: bool = False
