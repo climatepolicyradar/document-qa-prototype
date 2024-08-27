@@ -191,19 +191,34 @@ def get_llm(
 
                 assert endpoint is not None, f"Endpoint for model {model} not found"
 
+                full_model_name = (
+                    f"projects/{project_id}/locations/{location}/endpoints/{endpoint}"
+                )
                 # https://europe-west2-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/europe-west2/endpoints/${ENDPOINT_ID}:
                 if "max_tokens" in config.VERTEX_MODEL_ENDPOINTS[model]["params"]:
                     llm = VertexAI(
-                        full_model_name=f"projects/{project_id}/locations/{location}/endpoints/{endpoint}",
+                        full_model_name=full_model_name,
                         location=location,
                         project=project_id,
                         max_tokens=config.VERTEX_MODEL_ENDPOINTS[model]["params"][
                             "max_tokens"
                         ],
                     )
+                elif (
+                    "max_output_tokens"
+                    in config.VERTEX_MODEL_ENDPOINTS[model]["params"]
+                ):
+                    llm = VertexAI(
+                        full_model_name=full_model_name,
+                        location=location,
+                        project=project_id,
+                        max_output_tokens=config.VERTEX_MODEL_ENDPOINTS[model][
+                            "params"
+                        ]["max_output_tokens"],
+                    )
                 else:
                     llm = VertexAI(
-                        full_model_name=f"projects/{project_id}/locations/{location}/endpoints/{endpoint}",
+                        full_model_name=full_model_name,
                         location=location,
                         project=project_id,
                     )

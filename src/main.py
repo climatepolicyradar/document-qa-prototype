@@ -1,6 +1,7 @@
 import asyncio
 import json
 from anyio import Path
+from pydantic import BaseModel
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,9 +11,8 @@ from src.controllers.DocumentController import DocumentController
 from src.controllers.EvaluationController import EvaluationController
 from src.controllers.RagController import RagController
 from src.controllers.ScenarioController import ScenarioController
-from cpr_data_access.models import BaseDocument
 from src.logger import get_logger
-from src.models.data_models import RAGRequest
+from src.models.data_models import EndToEndGeneration, RAGRequest
 from src.online.inference import LLMTypes
 from src import config
 from src.models.data_models import QAPair
@@ -102,15 +102,20 @@ def do_rag(request: RAGRequest) -> dict:
     request.model = config_sc.model
     request.generation_engine = LLMTypes(config_sc.generation_engine)
 
+    LOGGER.info(
+        f"Running RAG pipeline with model {request.model} and prompt {request.prompt_template}"
+    )
+
     result = app_context["rag_controller"].run_rag_pipeline(
         query=request.query, scenario=request.as_scenario(dc)
     )
 
-    result.rag_response.metadata["responded"] = result.rag_response.refused_answer()
+    result.rag_response.metadata["responded"] = not result.rag_response.refused_answer()
 
     if result.rag_response.refused_answer():
         result = app_context["rag_controller"].execute_no_answer_flow(result)
 
+    result.rag_response.augment_passages_with_metadata(request.document_id)
     try:
         db_save = QAPair.from_end_to_end_generation(result, "prototype")
         db_save.save()
@@ -122,14 +127,14 @@ def do_rag(request: RAGRequest) -> dict:
 
 
 @app.get("/document/{document_id}")
-def get_document_data(document_id: str) -> BaseDocument:
+def get_document_data(document_id: str) -> dict:
     """
     Get a document by ID.
 
     :param str document_id: The document ID
     :return BaseDocument: The document
     """
-    return dc.create_base_document(document_id)
+    return dc.get_metadata(document_id)
 
 
 @app.get("/documents")
@@ -139,15 +144,6 @@ def get_documents():
     with open(metadata_path, "r") as f:
         metadata = json.load(f)
     return metadata
-
-
-@app.get("/documents/{document_id}")
-def get_document(document_id: str):
-    """Returns a document and its metadata available for the tool"""
-    metadata_path = Path("data/document_metadata.json")
-    with open(metadata_path, "r") as f:
-        metadata = json.load(f)
-    return [d for d in metadata if d["id"] == document_id][0]
 
 
 @app.websocket("/ws/stream_rag/")
@@ -240,12 +236,30 @@ async def get_highlights(source_id: str):
     return highlights
 
 
-@app.post("/evaluate/{source_id}")
+@app.post("/evaluate-all/{source_id}")
 async def evaluate(source_id: str):
     """Evaluate an answer."""
     qa_pair = QAPair.get_by_source_id(source_id)
     gen_model = qa_pair.to_end_to_end_generation()
 
     evals = await ec.evaluate_async(gen_model)
-    print(evals)
     return evals
+
+
+class EvaluateSingleRequest(BaseModel):
+    """A quick request data model for evaluating a single answer."""
+
+    query: str
+    answer: str
+    context: list[str]
+
+
+@app.post("/evaluate/{eval_id}")
+def evaluate_single(eval_id: str, query: EvaluateSingleRequest):
+    """Evaluate a single answer. Optimising for parallel calls from the frontend."""
+    gen_model = EndToEndGeneration.simple_holder(
+        query=query.query,
+        answer=query.answer,
+        context=query.context,
+    )
+    return gen_model

@@ -17,6 +17,7 @@ from peewee import (
     ForeignKeyField,
 )
 from playhouse.postgres_ext import BinaryJSONField
+from src.controllers.LibraryManager import LibraryManager
 from src.controllers.DocumentController import DocumentController
 from src.flows.utils import get_db
 
@@ -387,6 +388,20 @@ class RAGResponse(BaseModel):
             for idx, window_text in enumerate(window_texts)
         )
 
+    def augment_passages_with_metadata(self, document_id: str):
+        """Adds in page numbers (and TODO other metadata as context string) to the retrieved passages"""
+        lm = LibraryManager()
+        ids = [item["metadata"]["text_block_id"] for item in self.retrieved_documents]
+        data = lm.get_metadata_for_citation(document_id, ids)
+
+        for item in self.retrieved_documents:
+            api_item = [
+                i
+                for i in data
+                if i["text_block_id"] == item["metadata"]["text_block_id"]
+            ][0]
+            item["metadata"]["page_number"] = api_item["page_number"]
+
 
 class AssertionModel(BaseModel):
     """Model for assertions extracted from RAG responses."""
@@ -452,6 +467,24 @@ class EndToEndGeneration(BaseModel):
         """Returns a string representation of the EndToEndGeneration object."""
         return (
             f"EndToEndGeneration({self.rag_request.query}, {self.rag_response.__str__})"
+        )
+
+    @classmethod
+    def simple_holder(cls, query: str, answer: str, context: list[str]):
+        """Returns an E2E model with just query, answer, and context string"""
+        return cls(
+            config={},
+            rag_request=RAGRequest(
+                query=query,
+                document_id="",
+            ),
+            rag_response=RAGResponse(
+                text=answer,
+                retrieved_documents=context,  # type: ignore
+                query=query,
+            ),
+            error=None,
+            uuid=str(uuid.uuid4()),
         )
 
     def get_answer(self, remove_cot: bool = True) -> str:

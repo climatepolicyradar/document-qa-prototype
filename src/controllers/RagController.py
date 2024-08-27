@@ -1,6 +1,5 @@
 import asyncio
 from datetime import datetime
-import time
 import json
 import random
 from src.controllers.DocumentController import DocumentController
@@ -11,7 +10,6 @@ from langchain_core.messages.base import BaseMessage
 from langchain_core.language_models.base import BaseLanguageModel
 from src.controllers.VespaController import VespaController
 from src.controllers.ObservabilityManager import ObservabilityManager
-from src.controllers.GuardrailController import GuardrailController, GuardrailType
 
 from fastapi import WebSocket
 from src.logger import get_logger
@@ -55,18 +53,6 @@ class RagController:
         self.observability = ObservabilityManager()
         self.observe = False
         # TODO self.observe = observe
-
-        # Both guardrails select all
-        self.input_guardrail_controller = GuardrailController(
-            guardrail_types=[
-                GuardrailType.TOXICITY,
-                GuardrailType.WEB_SANITIZATION,
-                # GuardrailType.PII,  # TODO: this fails in CI due to a broken package
-            ]
-        )
-        self.output_guardrail_controller = GuardrailController(
-            guardrail_types=[GuardrailType.TOXICITY, GuardrailType.WEB_SANITIZATION]
-        )
 
     def get_llm(
         self, type: str, model: str, unfiltered: bool = False
@@ -205,38 +191,6 @@ class RagController:
         output_metadata["guardrails"] = {}
         start_time = datetime.now()
 
-        LOGGER.info("Running guardrails on query")
-        guardrails_start_time = time.time()
-        (
-            input_passes_guardrails,
-            input_individual_guardrails,
-        ) = self.input_guardrail_controller.validate_text(query)
-        guardrails_end_time = time.time()
-
-        input_guardrails_metadata = {
-            "passes": input_passes_guardrails,
-            "time_taken": guardrails_end_time - guardrails_start_time,
-            "individual_guardrails": input_individual_guardrails,
-        }
-        output_metadata["guardrails"]["input"] = input_guardrails_metadata
-
-        if input_passes_guardrails is True:
-            LOGGER.info("Query passed guardrails")
-        else:
-            LOGGER.info("Query did not pass guardrails")
-
-            if return_early_on_guardrail_failure:
-                return EndToEndGeneration(
-                    config=scenario.get_config(),
-                    rag_request=RAGRequest.from_scenario(query, scenario),
-                    rag_response=RAGResponse(
-                        text="",
-                        retrieved_documents=[],
-                        query=query,
-                        metadata=output_metadata,
-                    ),
-                )
-
         llm = self.get_llm(scenario.generation_engine, scenario.model)
 
         LOGGER.info(f"🤔 Running document: {scenario.document.document_id}")
@@ -260,26 +214,6 @@ class RagController:
 
         response_text = response["answer"]
         LOGGER.info(f"Response: {response_text}")
-
-        LOGGER.info("Running guardrails on response")
-        guardrails_start_time = time.time()
-        (
-            output_passes_guardrails,
-            output_individual_guardrails,
-        ) = self.output_guardrail_controller.validate_text(response_text)
-        guardrails_end_time = time.time()
-
-        output_guardrails_metadata = {
-            "passes": output_passes_guardrails,
-            "time_taken": guardrails_end_time - guardrails_start_time,
-            "individual_guardrails": output_individual_guardrails,
-        }
-        output_metadata["guardrails"]["output"] = output_guardrails_metadata
-
-        if output_passes_guardrails is True:
-            LOGGER.info("Response passed guardrails")
-        else:
-            LOGGER.info("Response did not pass guardrails")
 
         end_time = datetime.now()
         duration = end_time - start_time
@@ -512,14 +446,11 @@ class RagController:
         results = []
         for sentence, citations in matches:
             citation_numbers = [c.strip() for c in citations.split(",")]
-            results.append((sentence.strip(), citation_numbers))
+            formatted_sentence = sentence.strip().lstrip("- ").lstrip(".").lstrip(",")
+            formatted_sentence = formatted_sentence.capitalize()
+            results.append((formatted_sentence, citation_numbers))
 
         LOGGER.info(f"🔍 Extracted {len(results)} sentences with citations")
-
-        # extracted_sentences = extract_sentences_with_citations(rag_answer)
-        # LOGGER.debug(f"🔢 Extracted sentences: {extracted_sentences}")
-
-        assert len(results) > 0, "No sentences with citations found"
 
         for line in results:
             print(line)
