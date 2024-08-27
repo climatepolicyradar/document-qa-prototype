@@ -18,6 +18,16 @@ class LibraryManager:
     def _get_headers(self) -> dict:
         return {"Authorization": f"Bearer {self.api_token}"}
 
+    def get_documents(self) -> list[dict]:
+        """Get all documents from the library."""
+        url = f"{self.base_url}/full_text/-/query.json"
+        params = {
+            "sql": "select document_id, name, description, slug, family_slug, publication_ts, geography, category, type, source, keyword from documents",
+        }
+        response = requests.get(url, headers=self._get_headers(), params=params)
+        response.raise_for_status()
+        return response.json()
+
     def get_metadata_for_citation(
         self, document_id: str, text_block_ids: list[int]
     ) -> dict:
