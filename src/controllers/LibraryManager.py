@@ -72,7 +72,7 @@ class LibraryManager:
         """Get N text blocks before and after a given block for a document."""
         url = f"{self.base_url}/full_text/-/query.json"
         params = {
-            "sql": "SELECT distinct(tb.text_block_id), tb.text, tb.page_number FROM text_blocks tb WHERE tb.document_id = :document_id AND CAST(tb.text_block_id AS INTEGER) BETWEEN (:text_block_id - :N) AND (:text_block_id + :N) ORDER BY tb.text_block_id",
+            "sql": "SELECT distinct(tb.text_block_id), tb.text, tb.page_number FROM text_blocks tb WHERE tb.document_id = :document_id AND CAST(REPLACE(tb.text_block_id, 'b', '') AS INTEGER) BETWEEN (:text_block_id - :N) AND (:text_block_id + :N) ORDER BY tb.text_block_id",
             "document_id": document_id,
             "text_block_id": text_block_id,
             "N": N,
@@ -85,7 +85,7 @@ class LibraryManager:
         """Get the full text of a document."""
         url = f"{self.base_url}/full_text/-/query.json"
         params = {
-            "sql": "SELECT text_block_id, text, page_number FROM text_blocks WHERE document_id = :document_id ORDER BY text_block_id",
+            "sql": "SELECT text_block_id, text, page_number FROM text_blocks WHERE document_id = :document_id ORDER BY CAST(REPLACE(tb.text_block_id, 'b', '') AS INTEGER)",
             "document_id": document_id,
         }
         response = requests.get(url, headers=self._get_headers(), params=params)
@@ -98,7 +98,7 @@ class LibraryManager:
         """Get the section of a document that contains a given text block."""
         url = f"{self.base_url}/full_text/-/query.json"
         params = {
-            "sql": "WITH current_block AS (SELECT CAST(text_block_id AS INTEGER) AS current_block_number FROM text_blocks WHERE document_id = :document_id AND text_block_id = :text_block_id) SELECT tb.text_block_id, tb.text, tb.type, tb.type_confidence, tb.page_number FROM text_blocks tb, current_block cb WHERE tb.document_id = :document_id AND CAST(tb.text_block_id AS INTEGER) < cb.current_block_number AND tb.type IN ('sectionHeading', 'title') AND tb.type_confidence > 0.8 ORDER BY CAST(tb.text_block_id AS INTEGER) DESC LIMIT 1",
+            "sql": "WITH current_block AS (SELECT CAST(text_block_id AS INTEGER) AS current_block_number FROM text_blocks WHERE document_id = :document_id AND text_block_id = :text_block_id) SELECT tb.text_block_id, tb.text, tb.type, tb.type_confidence, tb.page_number FROM text_blocks tb, current_block cb WHERE tb.document_id = :document_id AND CAST(REPLACE(tb.text_block_id, 'b', '') AS INTEGER) < cb.current_block_number AND tb.type IN ('sectionHeading', 'title') AND tb.type_confidence > 0.8 ORDER BY CAST(REPLACE(tb.text_block_id, 'b', '') AS INTEGER) DESC LIMIT 1",
             "document_id": document_id,
             "text_block_id": text_block_id,
         }
