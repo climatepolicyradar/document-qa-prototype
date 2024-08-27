@@ -8,6 +8,7 @@ from src.models.data_models import (
     RAGRequest,
     RAGResponse,
     Scenario,
+    _strip_inner_ai_monologue,
     refused_answer,
 )
 from src.logger import get_logger
@@ -106,19 +107,7 @@ class EndToEndGenerationBuilder:
         """Extract the inner monologue from the RAG answer. Inner monologue is the text between #COT# and #/COT#. Returns (monologue, answer)"""
 
         try:
-            # Some quick LLMS ARE UNRULY CHILDREN checks
-            if "# /COT#" in text:
-                text = text.replace("# /COT#", "#/COT#")
-            if "#/COT #" in text:
-                text = text.replace("#/COT #", "#/COT#")
-
-            if "#COT#" in text and "#/COT#" in text:
-                return (
-                    text.split("#COT#")[1].split("#/COT#")[0],
-                    text.split("#/COT#")[1],
-                )
-            else:
-                return ("", text)
+            return _strip_inner_ai_monologue(text)
         except Exception as e:
             logger.error(f"Error stripping inner monologue: {e}")
             self.add_metadata_list_item("errors", "Could not strip inner monologue")

@@ -498,6 +498,23 @@ class ProcessedGenerationData(BaseModel):
     other_documents: list[Citation]
 
 
+def _strip_inner_ai_monologue(text: str) -> Tuple[str, str]:
+    """Strips the inner monologue from the RAG answer. Inner monologue is the text between #COT# and #/COT#. Returns as (monologue, answer)"""
+    # Some quick LLMS ARE UNRULY CHILDREN checks
+    if "# /COT#" in text:
+        text = text.replace("# /COT#", "#/COT#")
+    if "#/COT #" in text:
+        text = text.replace("#/COT #", "#/COT#")
+
+    if "#COT#" in text and "#/COT#" in text:
+        return (
+            text.split("#COT#")[1].split("#/COT#")[0],
+            text.split("#/COT#")[1],
+        )
+    else:
+        return ("", text)
+
+
 class EndToEndGeneration(BaseModel):
     """
     Generation with config, a RAG response, and potentially an error.
@@ -556,23 +573,7 @@ class EndToEndGeneration(BaseModel):
             raise ValueError("RAG response is None")
 
         try:
-            # Some quick LLMS ARE UNRULY CHILDREN checks
-            if "# /COT#" in self.rag_response.text:
-                self.rag_response.text = self.rag_response.text.replace(
-                    "# /COT#", "#/COT#"
-                )
-            if "#/COT #" in self.rag_response.text:
-                self.rag_response.text = self.rag_response.text.replace(
-                    "#/COT #", "#/COT#"
-                )
-
-            if "#COT#" in self.rag_response.text and "#/COT#" in self.rag_response.text:
-                return (
-                    self.rag_response.text.split("#COT#")[1].split("#/COT#")[0],
-                    self.rag_response.text.split("#/COT#")[1],
-                )
-            else:
-                return ("", self.rag_response.text)
+            return _strip_inner_ai_monologue(self.rag_response.text)
         except Exception:
             return ("", self.rag_response.text)
 
