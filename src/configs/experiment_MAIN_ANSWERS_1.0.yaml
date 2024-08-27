@@ -3,8 +3,6 @@ models:
     model: gemini-1.5-flash
   - generation_engine: vertexai
     model: climate-gpt-7b
-  - generation_engine: openai
-    model: gpt-4o
   - generation_engine: vertexai
     model: llama3-1-70b-instruct
   - generation_engine: vertexai

@@ -1,5 +1,6 @@
 import argparse
 from prefect import flow, get_run_logger, task
+from src.controllers.EvaluationController import EvaluationController
 from src.controllers.DocumentController import DocumentController
 from src.controllers.RagController import RagController
 from src.controllers.ScenarioController import ScenarioController
@@ -10,47 +11,27 @@ from src.models.data_models import Prompt, Query, Scenario
 from src.flows.tasks.data_tasks import (
     get_queries,
     save_answer,
-    get_unanswered_queries,
     get_query_by_id,
 )
 from src.flows.queue import get_queue_job, queue_job, mark_job_done
 
 
 @task
-def queue_answer_tasks(
-    scenarios: list[Scenario], tag: str, query_tag: str, only_new: bool
-):
+def queue_all_answer_tasks(scenarios: list[Scenario], tag: str, query_tag: str):
     db = get_db()
     logger = get_run_logger()
 
-    continue_queueing = True
-    done_scenarios = {}
+    queries = get_queries(db, query_tag)
 
     # We do it this way to invert scenario order so that we can queue across model,prompt combinations and process them in parallel rather than processing all queries for a given model/prompt combination sequentially
-    while continue_queueing:
+    offset = 0
+    num_per_loop = 50
+    while offset < len(queries):
         for scenario in scenarios:
-            scenario_key = f"{scenario.model}-{scenario.prompt.prompt_template}"
-            if scenario_key in done_scenarios:
-                continue
-
-            if only_new:
-                queries = get_unanswered_queries(
-                    db, tag, query_tag, scenario.model, scenario.prompt.prompt_template
+            for i, query in enumerate(queries[offset : offset + num_per_loop]):
+                logger.info(
+                    f"📋 Queueing job {i} of {num_per_loop} (offset {offset} of {len(queries)} total)"
                 )
-            else:
-                queries = get_queries(db, query_tag)
-
-            limit = min(len(queries), 10)
-
-            if limit < 10:
-                logger.info(f"📋 No more queries to queue for scenario {scenario}")
-                done_scenarios[scenario_key] = True
-
-            if len(done_scenarios) == len(scenarios):
-                continue_queueing = False
-
-            for i, query in enumerate(queries[:limit]):
-                logger.info(f"📋 Queueing job {i} of {limit} ({len(queries)} total)")
                 queue_job(
                     tag,
                     {
@@ -65,14 +46,28 @@ def queue_answer_tasks(
                     },
                 )
 
+        # Once we've done all the scenarios, we move to the next chunk
+        offset += num_per_loop
+
 
 @flow
 def process_answer_job_from_queue(
-    tag: str = "main_experiment_run_2024_08_24", limit: int = 15
+    tag: str = "main_experiment_run_2024_08_26", limit: int = 15
 ):
     db = get_db()
     logger = get_run_logger()
     dc = DocumentController()
+    rc = RagController()
+    ec = EvaluationController()
+    ec.set_evaluators(
+        [
+            "formatting",
+            "g_eval_policy",
+            "g_eval_faithfulness_llama3",
+            "patronus_lynx",
+            "vectara",
+        ]
+    )
 
     for i in range(limit):
         job = get_queue_job(tag)
@@ -98,18 +93,22 @@ def process_answer_job_from_queue(
 
         query = get_query_by_id(db, job["query_id"])
 
-        generate_answer_full(query, scenario, db, tag, job["query_tag"])
+        generate_answer_full(query, scenario, db, tag, job["query_tag"], rc, ec)
 
         mark_job_done(tag, job["receipt_handle"])
 
 
-@task
 def generate_answer_full(
-    query: Query, scenario: Scenario, db: Database, tag: str, query_tag: str
+    query: Query,
+    scenario: Scenario,
+    db: Database,
+    tag: str,
+    query_tag: str,
+    rc: RagController,
+    ec: EvaluationController,
 ):
     logger = get_run_logger()
     dc = DocumentController()
-    rc = RagController()
 
     assert query.document_id is not None, "Document ID is None"
     scenario.document = dc.create_base_document(str(query.document_id))
@@ -119,16 +118,24 @@ def generate_answer_full(
     result = generate_answer_task(query, scenario, tag, rc)
 
     # Save to database
-    save_answer(tag, result, db, query)
+    answer = save_answer(tag, result, db, query)
+    if not result.rag_response.refused_answer():  # type: ignore
+        try:
+            result = ec.evaluate_all(result)
+
+            for score in result:
+                answer.evals[f"{score.name}-{score.type}"] = score.model_dump_json()
+
+            logger.info(f"📋 Evaluations: {answer.evals}")
+            answer.save()
+        except Exception as e:
+            logger.error(f"🚨 Error evaluating answer: {e}")
+
+    return result
 
 
 @flow
-def queue_answer_flow(
-    config: str,
-    tag: str,
-    query_tag: str,
-    only_new: bool = True,
-):
+def queue_answer_flow(config: str, tag: str, query_tag: str):
     """
     Flow for generating answers for queries.
 
@@ -136,14 +143,14 @@ def queue_answer_flow(
     """
     sc = ScenarioController.from_config(config)
 
-    queue_answer_tasks.submit(sc.scenarios, tag, query_tag, only_new)
+    queue_all_answer_tasks(sc.scenarios, tag, query_tag)
 
 
-def main(tag: str, config: str, query_tag: str, only_new: bool):
-    process_answer_job_from_queue(tag, limit=2)
+def main(tag: str, config: str, query_tag: str):
+    process_answer_job_from_queue(tag, limit=15)
     #
     # spawn_answer_tasks(tag, limit=2)
-    # queue_answer_flow(config, tag, query_tag, only_new)
+    # queue_answer_flow(config, tag, query_tag)
 
 
 if __name__ == "__main__":
@@ -156,16 +163,10 @@ if __name__ == "__main__":
         help="Path to the config file",
     )
     parser.add_argument(
-        "--only_new",
-        type=bool,
-        default=True,
-        help="Only generate answers for new queries",
-    )
-    parser.add_argument(
         "--query_tag",
         type=str,
         help="Tag for selecting grouped queries to answer",
         default="",
     )
     args = parser.parse_args()
-    main(args.tag, args.config, args.query_tag, args.only_new)
+    main(args.tag, args.config, args.query_tag)

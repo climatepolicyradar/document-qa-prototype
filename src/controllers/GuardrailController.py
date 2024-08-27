@@ -7,6 +7,7 @@ from src.logger import get_logger
 import requests
 from typing import Dict
 from pydantic import BaseModel, Field
+import json
 
 assert config
 
@@ -24,6 +25,22 @@ class GuardrailValidationResponse(BaseModel):
 
     overall_result: bool
     individual_results: Dict[str, bool]
+
+    def to_json(self):
+        """Convert the response to JSON."""
+        return {
+            "overall_result": self.overall_result,
+            "individual_results": self.individual_results,
+        }
+
+
+# Monkey-patch the JSONEncoder (peewee basically has trouble serialising basemodels)
+def _default(self, obj):
+    return getattr(obj.__class__, "to_json", _default.default)(obj)  # type: ignore
+
+
+_default.default = json.JSONEncoder().default
+json.JSONEncoder.default = _default  # type: ignore
 
 
 class GuardrailController:
@@ -73,14 +90,11 @@ class GuardrailController:
 
         except requests.RequestException as e:
             LOGGER.error(f"❌ Guardrail API request failed: {str(e)}")
-            raise
+            raise e
         except ValueError as e:
             LOGGER.error(f"❌ Invalid response from Guardrail API: {str(e)}")
-            raise
+            raise e
 
     def __str__(self) -> str:
         """Returns a string representation of the GuardrailController."""
         return f"GuardrailController(api_url={self.api_url})"
-
-
-assert GuardrailController, "GuardrailController class must be defined"

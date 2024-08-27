@@ -1,3 +1,4 @@
+import random
 from prefect import task, get_run_logger, flow
 
 from peewee import Database, fn
@@ -71,14 +72,19 @@ def get_unanswered_queries(
         .distinct()
     )
 
+    query_id_list = [query_model.query_id for query_model in query_models]
+
     logger.info(f"🎲 {query_models} ")
 
     queries = [
         query.to_query()
         for query in DBQuery.select().where(
-            DBQuery.tag == query_tag, DBQuery.id.not_in(query_models)
+            DBQuery.tag == query_tag, DBQuery.id.not_in(query_id_list)
         )
     ]
+
+    # Randomise query order
+    random.shuffle(queries)
 
     logger.info(
         f"🎲 Got {len(queries)} unanswered queries for tag {tag} with model {model} and prompt {prompt}"

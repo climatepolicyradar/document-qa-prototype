@@ -75,8 +75,7 @@ async def get_flow_stats(flow_names: list[str]):
 @flow
 async def generate_update(
     tags: list[str] = [
-        "g_eval_comparison_experiment_2",
-        "main_experiment_run_2024_08_24",
+        "main_experiment_run_2024_08_26",
     ],
 ):
     logger = get_run_logger()
@@ -93,13 +92,7 @@ async def generate_update(
             include_flow_url=False,
         )
 
-    await get_flow_stats(
-        [
-            "process-answer-job-from-queue",
-            "queue-answer-flow",
-            "process-eval-experiment-from-queue",
-        ]
-    )
+    await get_flow_stats(["process-answer-job-from-queue", "queue-answer-flow"])
 
 
 if __name__ == "__main__":

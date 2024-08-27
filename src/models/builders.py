@@ -8,6 +8,7 @@ from src.models.data_models import (
     RAGRequest,
     RAGResponse,
     Scenario,
+    _strip_inner_ai_monologue,
     refused_answer,
 )
 from src.logger import get_logger
@@ -79,13 +80,25 @@ class EndToEndGenerationBuilder:
             self.raw_answer
         )
 
-        assertions_and_indices = self._setup_citations(self.answer)
+        self._setup_citations(self.answer)
 
         self.add_metadata("responded", not refused_answer(self.answer))
 
         self.assertions = [
-            AssertionModel(assertion=assertion[0], citations=self.cited_documents)
-            for assertion in assertions_and_indices
+            AssertionModel(
+                assertion=assertion[0],
+                citations=[
+                    Citation(
+                        citation_idx=idx,
+                        cited=True,
+                        text=self.retrieved_documents[idx]["page_content"]
+                        if idx in range(0, len(self.retrieved_documents))
+                        else "",
+                    )
+                    for idx in assertion[1]
+                ],
+            )
+            for assertion in self._get_cited_document_indices_in_answer(answer)
         ]
 
         return self
@@ -94,19 +107,7 @@ class EndToEndGenerationBuilder:
         """Extract the inner monologue from the RAG answer. Inner monologue is the text between #COT# and #/COT#. Returns (monologue, answer)"""
 
         try:
-            # Some quick LLMS ARE UNRULY CHILDREN checks
-            if "# /COT#" in text:
-                text = text.replace("# /COT#", "#/COT#")
-            if "#/COT #" in text:
-                text = text.replace("#/COT #", "#/COT#")
-
-            if "#COT#" in text and "#/COT#" in text:
-                return (
-                    text.split("#COT#")[1].split("#/COT#")[0],
-                    text.split("#/COT#")[1],
-                )
-            else:
-                return ("", text)
+            return _strip_inner_ai_monologue(text)
         except Exception as e:
             logger.error(f"Error stripping inner monologue: {e}")
             self.add_metadata_list_item("errors", "Could not strip inner monologue")
@@ -125,30 +126,29 @@ class EndToEndGenerationBuilder:
                     for index in assertion_and_index[1]
                 ]
             )
-            self.cited_documents = [
-                Citation(
-                    citation_idx=int(index),
-                    cited=True,
-                    text=self.retrieved_documents[int(index)]["page_content"],
-                )
-                for index in unique_indices
-            ]
-            logger.info(f"CITED DOCUMENTS: {self.cited_documents}")
+            logger.info(f"UNIQUE INDICES: {unique_indices}")
+            # Set up other documents list and mark which ones are cited
             for i, doc in enumerate(self.retrieved_documents):
                 doc["citation_idx"] = i
-                doc["cited"] = i in [
-                    citation.citation_idx for citation in self.cited_documents
-                ]
+                cited = True if (i + 1) in unique_indices else False
+                doc["cited"] = cited
+                if cited:
+                    self.cited_documents.append(
+                        Citation(
+                            citation_idx=(i + 1),
+                            cited=True,
+                            text=doc["page_content"],
+                        )
+                    )
 
-                if not doc["cited"]:
+                if not cited:
                     self.other_documents.append(
                         Citation(
-                            citation_idx=i,
+                            citation_idx=(i + 1),
                             cited=False,
                             text=doc["page_content"],
                         )
                     )
-        return assertions_and_indices
 
     def set_retrieved_documents(self, retrieved_documents: list[Any]):
         """Sets the retrieved documents."""
@@ -212,7 +212,9 @@ class EndToEndGenerationBuilder:
                 formatted_sentence = (
                     sentence.strip().lstrip("- ").lstrip(".").lstrip(",")
                 )
-                formatted_sentence = formatted_sentence.capitalize()
+                formatted_sentence = (
+                    formatted_sentence[:1].upper() + formatted_sentence[1:]
+                )
                 results.append((formatted_sentence, citation_numbers))
         except Exception as e:
             logger.error(f"Error extracting cited document indices: {e}")

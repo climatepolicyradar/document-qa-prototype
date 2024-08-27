@@ -16,6 +16,7 @@ from peewee import (
     UUIDField,
     DateTimeField,
     ForeignKeyField,
+    BooleanField,
 )
 from playhouse.postgres_ext import BinaryJSONField
 from src.controllers.LibraryManager import LibraryManager
@@ -218,6 +219,38 @@ class DBQuery(Model):
         database = db
 
 
+class Notebook(Model):
+    """Represents a notebook in the database."""
+
+    id = AutoField()
+    uuid = UUIDField(null=True)
+    name = CharField()
+    created_at = DateTimeField(default=datetime.datetime.now)
+    updated_at = DateTimeField(default=datetime.datetime.now)
+    is_shared = BooleanField(default=False)
+    is_deleted = BooleanField(default=False)
+
+    @staticmethod
+    def get_by_uuid(uuid: str) -> "Notebook":
+        """Returns a Notebook object by uuid."""
+        return (
+            Notebook.select()
+            .where(Notebook.uuid == uuid)
+            .where(Notebook.is_deleted == False)  # noqa:E712
+            .first()
+        )
+
+    @staticmethod
+    def create_new_notebook(name: str) -> "Notebook":
+        """Creates a new notebook."""
+        return Notebook(name=name, uuid=str(uuid.uuid4()))
+
+    class Meta:
+        """Set DB for the model"""
+
+        database = db
+
+
 class QAPair(Model):
     """Represents a Question-Answer pair in the database."""
 
@@ -235,12 +268,17 @@ class QAPair(Model):
     status = CharField(null=True)
     created_at = DateTimeField(default=datetime.datetime.now)
     updated_at = DateTimeField(default=datetime.datetime.now)
+    notebook_id = ForeignKeyField(Notebook, null=True)
     generation = BinaryJSONField(null=True)  # serialized EndToEndGeneration
 
     class Meta:
         """Set DB for the model"""
 
         database = db
+
+    def is_part_of_notebook(self) -> bool:
+        """Returns True if the QAPair is part of a notebook."""
+        return self.notebook_id is not None
 
     @classmethod
     def get_by_source_id(cls, source_id: str) -> "QAPair":
@@ -262,7 +300,7 @@ class QAPair(Model):
             if generation.rag_response
             else {},
             source_id=generation.uuid,
-            generation=generation.model_dump_json(serialize_as_any=True),
+            generation=generation.model_dump_json(),
         )
 
     def to_end_to_end_generation(self) -> "EndToEndGeneration":
@@ -298,6 +336,7 @@ class RAGRequest(BaseModel):
     prompt_template: str = "FAITHFULQA_SCHIMANSKI_CITATION_QA_TEMPLATE_MODIFIED"
     retrieval_window: int = 1
     config: Optional[str] = "src/configs/answer_config.yaml"
+    notebook_uuid: Optional[str] = None
 
     def as_scenario(self, dc: DocumentController) -> Scenario:
         """Returns the RAGRequest as a Scenario object."""
@@ -459,6 +498,23 @@ class ProcessedGenerationData(BaseModel):
     other_documents: list[Citation]
 
 
+def _strip_inner_ai_monologue(text: str) -> Tuple[str, str]:
+    """Strips the inner monologue from the RAG answer. Inner monologue is the text between #COT# and #/COT#. Returns as (monologue, answer)"""
+    # Some quick LLMS ARE UNRULY CHILDREN checks
+    if "# /COT#" in text:
+        text = text.replace("# /COT#", "#/COT#")
+    if "#/COT #" in text:
+        text = text.replace("#/COT #", "#/COT#")
+
+    if "#COT#" in text and "#/COT#" in text:
+        return (
+            text.split("#COT#")[1].split("#/COT#")[0],
+            text.split("#/COT#")[1],
+        )
+    else:
+        return ("", text)
+
+
 class EndToEndGeneration(BaseModel):
     """
     Generation with config, a RAG response, and potentially an error.
@@ -489,6 +545,24 @@ class EndToEndGeneration(BaseModel):
 
         return self.rag_response.text
 
+    def has_response(self) -> bool:
+        """Returns True if the RAG response is not None."""
+        return self.rag_response is not None
+
+    def has_documents(self) -> bool:
+        """Returns True if the RAG response has documents."""
+        return (
+            self.rag_response is not None
+            and self.rag_response.retrieved_documents is not None
+        )
+
+    def get_documents(self) -> list[dict]:
+        """Returns the retrieved documents from the RAG response. Returns empty list if no documents."""
+        if not self.has_documents():
+            return []
+
+        return self.rag_response.retrieved_documents  # type: ignore
+
     def extract_inner_monologue(self) -> Tuple[str, str]:
         """
         Extract the inner monologue from the RAG answer. Inner monologue is the text between #COT# and #/COT#.
@@ -499,23 +573,7 @@ class EndToEndGeneration(BaseModel):
             raise ValueError("RAG response is None")
 
         try:
-            # Some quick LLMS ARE UNRULY CHILDREN checks
-            if "# /COT#" in self.rag_response.text:
-                self.rag_response.text = self.rag_response.text.replace(
-                    "# /COT#", "#/COT#"
-                )
-            if "#/COT #" in self.rag_response.text:
-                self.rag_response.text = self.rag_response.text.replace(
-                    "#/COT #", "#/COT#"
-                )
-
-            if "#COT#" in self.rag_response.text and "#/COT#" in self.rag_response.text:
-                return (
-                    self.rag_response.text.split("#COT#")[1].split("#/COT#")[0],
-                    self.rag_response.text.split("#/COT#")[1],
-                )
-            else:
-                return ("", self.rag_response.text)
+            return _strip_inner_ai_monologue(self.rag_response.text)
         except Exception:
             return ("", self.rag_response.text)
 
