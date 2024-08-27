@@ -539,6 +539,13 @@ class EndToEndGeneration(BaseModel):
             and self.rag_response.retrieved_documents is not None
         )
 
+    def get_documents(self) -> list[dict]:
+        """Returns the retrieved documents from the RAG response. Returns empty list if no documents."""
+        if not self.has_documents():
+            return []
+
+        return self.rag_response.retrieved_documents  # type: ignore
+
     def extract_inner_monologue(self) -> Tuple[str, str]:
         """
         Extract the inner monologue from the RAG answer. Inner monologue is the text between #COT# and #/COT#.

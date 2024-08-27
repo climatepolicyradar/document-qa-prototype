@@ -33,9 +33,7 @@ class SummariseDocuments(LLMCommand):
 
         summary = self.rag_controller.run_llm(
             scenario,
-            {
-                "query_str": end_to_end_generation.rag_response.retrieved_passages_as_string()  # type: ignore
-            },
+            {"query_str": end_to_end_generation.get_documents()},
         )
 
         return summary
@@ -58,10 +56,7 @@ class GetTopicsFromText(LLMCommand):
             return []
 
         retrieved_passages_joined = " ".join(
-            [
-                doc["page_content"]
-                for doc in end_to_end_generation.rag_response.retrieved_documents  # type: ignore
-            ]
+            [doc["page_content"] for doc in end_to_end_generation.get_documents()]
         )
 
         topics = self.rag_controller.run_llm(
