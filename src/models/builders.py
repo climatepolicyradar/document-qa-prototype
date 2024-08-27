@@ -128,14 +128,17 @@ class EndToEndGenerationBuilder:
             )
             logger.info(f"UNIQUE INDICES: {unique_indices}")
             # Set up other documents list and mark which ones are cited
+            self.cited_documents = []
+            self.other_documents = []
             for i, doc in enumerate(self.retrieved_documents):
-                doc["citation_idx"] = i
-                cited = True if (i + 1) in unique_indices else False
+                actual_idx = i + 1
+                doc["citation_idx"] = actual_idx
+                cited = True if actual_idx in unique_indices else False
                 doc["cited"] = cited
                 if cited:
                     self.cited_documents.append(
                         Citation(
-                            citation_idx=(i + 1),
+                            citation_idx=actual_idx,
                             cited=True,
                             text=doc["page_content"],
                         )
@@ -144,7 +147,7 @@ class EndToEndGenerationBuilder:
                 if not cited:
                     self.other_documents.append(
                         Citation(
-                            citation_idx=(i + 1),
+                            citation_idx=actual_idx,
                             cited=False,
                             text=doc["page_content"],
                         )
