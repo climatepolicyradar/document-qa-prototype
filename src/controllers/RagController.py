@@ -1,6 +1,8 @@
 from datetime import datetime
 import json
 import random
+
+from fastapi import HTTPException
 from src.commands.llm_commands import GetTopicsFromText, SummariseDocuments
 from src.controllers.ScenarioController import Scenario
 from cpr_data_access.models import BaseDocument
@@ -9,6 +11,7 @@ from langchain_core.messages.base import BaseMessage
 from langchain_core.language_models.base import BaseLanguageModel
 from src.controllers.VespaController import VespaController
 from src.controllers.ObservabilityManager import ObservabilityManager
+from src.controllers.GuardrailController import GuardrailController
 
 from src.logger import get_logger
 from src.models.builders import EndToEndGenerationBuilder
@@ -36,6 +39,7 @@ class RagController:
         self.vespa = VespaController()
 
         self.observability = ObservabilityManager()
+        self.guardrails = GuardrailController()
         self.observe = False
         # TODO self.observe = observe
 
@@ -164,9 +168,24 @@ class RagController:
             EndToEndGenerationBuilder()
             .set_scenario(scenario)
             .add_metadata("guardrails", {})
+            .add_metadata("guardrails_failed", False)
         )
 
         start_time = datetime.now()
+
+        LOGGER.info(f"🔍 Running guardrails for query: {query}")
+        guardrail_result = self.guardrails.validate(query)
+        LOGGER.info(f"🔍 Guardrail result: {guardrail_result}")
+
+        if guardrail_result.overall_result:
+            LOGGER.info(f"🔍 Guardrail passed for query: {query}")
+        else:
+            LOGGER.info(f"🔍 Guardrail failed for query: {query}")
+            if return_early_on_guardrail_failure:
+                raise HTTPException(
+                    status_code=400,
+                    detail="We could not process this query because it failed our safety checks.",
+                )
 
         llm = self.get_llm(scenario.generation_engine, scenario.model)
 
@@ -189,6 +208,15 @@ class RagController:
         )
 
         generation.hydrate_from_rag_chain_response(response)
+
+        LOGGER.info(f"🔍 Running guardrrails on response: {generation.get_answer()}")
+        guardrail_result = self.guardrails.validate(generation.get_answer())
+        LOGGER.info(f"🔍 Guardrail result: {guardrail_result}")
+
+        generation.add_metadata("guardrails", guardrail_result)
+        generation.add_metadata(
+            "guardrails_failed", not guardrail_result.overall_result
+        )
 
         LOGGER.info(f"Response: {generation.raw_answer}")
         LOGGER.info(f"Duration: {datetime.now()-start_time}")

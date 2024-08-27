@@ -67,6 +67,10 @@ class EndToEndGenerationBuilder:
         """Returns True if the generation has documents."""
         return len(self.retrieved_documents) > 0
 
+    def get_answer(self) -> str:
+        """Returns the answer."""
+        return self.answer
+
     def set_answer(self, answer: str):
         """Sets the answer. In doing so, extracts which sources were cited and populates the cited_documents and other_documents lists. Also breaks the answer up into assertions and generates the assertions list."""
 

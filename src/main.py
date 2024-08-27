@@ -107,8 +107,13 @@ def do_rag(request: RAGRequest) -> dict:
     )
 
     result = app_context["rag_controller"].run_rag_pipeline(
-        query=request.query, scenario=request.as_scenario(dc)
+        query=request.query,
+        scenario=request.as_scenario(dc),
+        return_early_on_guardrail_failure=True,
     )
+
+    if result.rag_response.metadata.get("guardrails_failed"):
+        return result.model_dump()
 
     if result.rag_response.refused_answer():
         result = app_context["rag_controller"].execute_no_answer_flow(result)
