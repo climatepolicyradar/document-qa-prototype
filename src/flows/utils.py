@@ -117,16 +117,18 @@ def get_db() -> Database:
 
 
 @task
-def send_slack_message(message):
+def send_slack_message(message, include_flow_url: bool = True):
     logger = get_run_logger()
 
     # Retrieve Slack credentials from AWS Parameter Store
     webhook_url = get_secret("PREFECT_SLACK_WEBHOOK")
 
-    flow_url = f"https://app.prefect.cloud/account/4b1558a0-3c61-4849-8b18-3e97e0516d78/workspace/1753b4f0-6221-4f6a-9233-b146518b4545/flows/flow/{get_flow_run_id()}"
+    flow_url = f"https://app.prefect.cloud/account/4b1558a0-3c61-4849-8b18-3e97e0516d78/workspace/1753b4f0-6221-4f6a-9233-b146518b4545/flows/flow/{get_flow_run_id()}"  # noqa:F841
 
     # Set the payload for the POST request
-    payload = {"text": f"{message} (<{flow_url}|Flow details>)"}
+    payload = {
+        "text": f"{message} {'<{flow_url}|Flow details>' if include_flow_url else ''}"
+    }
 
     # Send the POST request to the Slack webhook URL
     response = requests.post(webhook_url, json=payload)

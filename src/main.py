@@ -1,12 +1,13 @@
-import asyncio
+from datetime import datetime
 import json
 from anyio import Path
 from pydantic import BaseModel
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from langchain.globals import set_verbose, set_debug
 from dotenv import load_dotenv, find_dotenv
+from src.controllers.NotebookController import NotebookController
 from src.controllers.DocumentController import DocumentController
 from src.controllers.EvaluationController import EvaluationController
 from src.controllers.RagController import RagController
@@ -16,6 +17,7 @@ from src.models.data_models import EndToEndGeneration, RAGRequest
 from src.online.inference import LLMTypes
 from src import config
 from src.models.data_models import QAPair
+from src.services.HighlightService import HighlightService
 
 config.logger.info("Here we go yo")  # I just want ruff to stop removing my import.
 
@@ -67,6 +69,8 @@ app.add_middleware(
 )
 LOGGER.info("App and context created")
 
+notebook_controller = NotebookController()
+
 
 @app.get("/")
 async def get_health():
@@ -107,23 +111,61 @@ def do_rag(request: RAGRequest) -> dict:
     )
 
     result = app_context["rag_controller"].run_rag_pipeline(
-        query=request.query, scenario=request.as_scenario(dc)
+        query=request.query,
+        scenario=request.as_scenario(dc),
+        return_early_on_guardrail_failure=True,
     )
 
-    result.rag_response.metadata["responded"] = not result.rag_response.refused_answer()
+    if result.rag_response.metadata.get("guardrails_failed"):
+        return result.model_dump()
 
     if result.rag_response.refused_answer():
         result = app_context["rag_controller"].execute_no_answer_flow(result)
 
     result.rag_response.augment_passages_with_metadata(request.document_id)
     try:
+        # Save the answer to the database
         db_save = QAPair.from_end_to_end_generation(result, "prototype")
         db_save.save()
+
+        # Create or update the notebook for this answer
+        notebook = notebook_controller.update_notebook(request.notebook_uuid, db_save)
+        result.add_metadata("notebook_uuid", notebook.uuid)
     except Exception as e:
         LOGGER.error(f"Error saving to database: {e}")
+        raise e
 
     return_json = result.model_dump()
     return return_json
+
+
+class NotebookResponse(BaseModel):
+    """Holds the notebook and its answers."""
+
+    id: int
+    uuid: str
+    name: str
+    created_at: datetime
+    updated_at: datetime
+    is_shared: bool
+    answers: list[EndToEndGeneration]
+
+
+@app.get("/notebook/{notebook_uuid}")
+def get_notebook(notebook_uuid: str) -> NotebookResponse:
+    """Get a notebook by UUID."""
+    result = notebook_controller.get_notebook_with_answers(notebook_uuid)
+
+    # Pyright and peewee don't get along
+    return NotebookResponse(
+        id=result.id,  # type: ignore
+        uuid=notebook_uuid,
+        name=result.name,  # type: ignore
+        created_at=result.created_at,  # type: ignore
+        updated_at=result.updated_at,  # type: ignore
+        is_shared=result.is_shared,  # type: ignore
+        answers=[a.to_end_to_end_generation() for a in result.answers],  # type: ignore
+    )
 
 
 @app.get("/document/{document_id}")
@@ -146,36 +188,6 @@ def get_documents():
     return metadata
 
 
-@app.websocket("/ws/stream_rag/")
-async def stream_rag(websocket: WebSocket):
-    """Stream RAG (Retrieval-Augmented Generation) on a document."""
-    await websocket.accept()
-    await websocket.send_json({"type": "ai", "content": "Connected to RAG stream"})
-    input_data = await websocket.receive_json()
-    request = RAGRequest(**input_data)
-
-    try:
-        # messy messy messy
-        sc = ScenarioController.from_config(api_config)
-        config_sc = sc.scenarios[
-            0
-        ]  # TODO - this is how we A/B Test! Pick scenarios from config
-        request.prompt_template = config_sc.prompt.prompt_template
-        request.model = config_sc.model
-        request.generation_engine = LLMTypes(config_sc.generation_engine)
-
-        current_sc = request.as_scenario(dc)
-
-        result = await app_context["rag_controller"].stream_rag_pipeline(
-            query=request.query, scenario=current_sc, websocket=websocket
-        )
-
-        await websocket.send_json({"type": "final", "result": result.model_dump()})
-        # await websocket.send_json({'type': 'final', 'result': {'answer': 'test'}})
-    except WebSocketDisconnect:
-        await websocket.close()
-
-
 @app.post("/highlights/{source_id}")
 async def get_highlights(source_id: str):
     """Get highlights from a document."""
@@ -184,56 +196,12 @@ async def get_highlights(source_id: str):
 
     assert gen_model.rag_response is not None, "RAG response is None"
 
-    assertions = app_context["rag_controller"].extract_assertions_from_answer(
-        gen_model.get_answer()
-    )
+    hs = HighlightService()
 
-    LOGGER.info(gen_model.rag_request.query)
-    LOGGER.info(gen_model.rag_request.document_id)
-
-    async def process_assertion(assertion):
-        return {
-            "citations": assertion.citations,
-            "answerSubstring": assertion.assertion,
-            "uuid": assertion.uuid,
-            "citationSubstring": await app_context[
-                "rag_controller"
-            ].highlight_key_quotes(
-                gen_model.rag_request.query,
-                assertion,
-                gen_model.rag_response.retrieved_documents,  # type: ignore
-            ),
-        }
-
-    LOGGER.info("🚀 Launching parallel highlight processing")
-    all_assertions = [
-        atomic
-        for assertion in assertions
-        for atomic in assertion.to_atomic_assertions()
-    ]
-
-    highlights = await asyncio.gather(
-        *[process_assertion(assertion) for assertion in all_assertions]
-    )
-
-    LOGGER.info("🧠 Consolidating highlights by UUID")
-    consolidated_highlights = {}
-    for highlight in highlights:
-        uuid = highlight["uuid"]
-        if uuid not in consolidated_highlights:
-            consolidated_highlights[uuid] = {
-                "answerSubstring": highlight["answerSubstring"],
-                "citationSubstrings": {},
-            }
-        consolidated_highlights[uuid]["citationSubstrings"][
-            highlight["citations"][0]
-        ] = highlight["citationSubstring"]
-
-    highlights = list(consolidated_highlights.values())
-    LOGGER.info(f"🎭 Consolidated {len(highlights)} unique assertions")
-    LOGGER.info(f"✅ Processed {len(highlights)} highlights in parallel")
-
-    return highlights
+    return hs.highlight_key_quotes(
+        gen_model.rag_response.query,
+        gen_model.processed_generation_data.assertions,  # type: ignore
+    )  # type: ignore
 
 
 @app.post("/evaluate-all/{source_id}")
@@ -246,20 +214,14 @@ async def evaluate(source_id: str):
     return evals
 
 
-class EvaluateSingleRequest(BaseModel):
-    """A quick request data model for evaluating a single answer."""
-
-    query: str
-    answer: str
-    context: list[str]
-
-
-@app.post("/evaluate/{eval_id}")
-def evaluate_single(eval_id: str, query: EvaluateSingleRequest):
+@app.post("/evaluate/{eval_id}/{source_id}")
+def evaluate_single(eval_id: str, source_id: str):
     """Evaluate a single answer. Optimising for parallel calls from the frontend."""
-    gen_model = EndToEndGeneration.simple_holder(
-        query=query.query,
-        answer=query.answer,
-        context=query.context,
-    )
-    return gen_model
+    qa_pair = QAPair.get_by_source_id(source_id)
+    gen_model = qa_pair.to_end_to_end_generation()
+
+    mini_ec = EvaluationController()
+    mini_ec.set_evaluators([eval_id])
+
+    evals = mini_ec.evaluate(gen_model, eval_id)
+    return evals

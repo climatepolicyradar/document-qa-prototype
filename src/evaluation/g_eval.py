@@ -3,9 +3,9 @@ from abc import ABC, abstractmethod
 
 from src.evaluation.evaluator import Evaluator
 from src.models.data_models import EndToEndGeneration
-from src.controllers.RagController import RagController
 from src.evaluation.evaluator import Score
 from src.logger import get_logger
+from src.online.inference import get_llm
 
 
 LOGGER = get_logger(__name__)
@@ -26,7 +26,7 @@ class GEval(Evaluator, ABC):
     NAME = ""
 
     def __init__(self, model_name: str = "gemini-1.5-pro"):
-        self.model = RagController().get_llm("gemini", model_name)
+        self.model = get_llm("gemini", model_name)
 
     def evaluate(
         self, generation: EndToEndGeneration, prompt: Optional[str] = None

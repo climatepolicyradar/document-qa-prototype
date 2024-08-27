@@ -2,10 +2,11 @@ from enum import Enum
 import json
 import jinja2
 from pydantic import BaseModel, ConfigDict, model_validator
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
 import datetime
 from wandb.sdk.data_types.trace_tree import Trace
 from cpr_data_access.models import BaseDocument
+
 from langchain_core.prompts import ChatPromptTemplate
 from peewee import (
     Model,
@@ -15,6 +16,7 @@ from peewee import (
     UUIDField,
     DateTimeField,
     ForeignKeyField,
+    BooleanField,
 )
 from playhouse.postgres_ext import BinaryJSONField
 from src.controllers.LibraryManager import LibraryManager
@@ -26,6 +28,8 @@ import hashlib
 
 import src.config as config
 from src.online.inference import LLMTypes
+from src.logger import get_logger
+
 
 from src.prompts.template_building import (
     get_citation_template,
@@ -34,6 +38,9 @@ from src.prompts.template_building import (
     system_prompt,
 )
 from src.config import root_templates_folder
+
+
+logger = get_logger(__name__)
 
 
 try:
@@ -212,6 +219,38 @@ class DBQuery(Model):
         database = db
 
 
+class Notebook(Model):
+    """Represents a notebook in the database."""
+
+    id = AutoField()
+    uuid = UUIDField(null=True)
+    name = CharField()
+    created_at = DateTimeField(default=datetime.datetime.now)
+    updated_at = DateTimeField(default=datetime.datetime.now)
+    is_shared = BooleanField(default=False)
+    is_deleted = BooleanField(default=False)
+
+    @staticmethod
+    def get_by_uuid(uuid: str) -> "Notebook":
+        """Returns a Notebook object by uuid."""
+        return (
+            Notebook.select()
+            .where(Notebook.uuid == uuid)
+            .where(Notebook.is_deleted == False)  # noqa:E712
+            .first()
+        )
+
+    @staticmethod
+    def create_new_notebook(name: str) -> "Notebook":
+        """Creates a new notebook."""
+        return Notebook(name=name, uuid=str(uuid.uuid4()))
+
+    class Meta:
+        """Set DB for the model"""
+
+        database = db
+
+
 class QAPair(Model):
     """Represents a Question-Answer pair in the database."""
 
@@ -229,12 +268,17 @@ class QAPair(Model):
     status = CharField(null=True)
     created_at = DateTimeField(default=datetime.datetime.now)
     updated_at = DateTimeField(default=datetime.datetime.now)
+    notebook_id = ForeignKeyField(Notebook, null=True)
     generation = BinaryJSONField(null=True)  # serialized EndToEndGeneration
 
     class Meta:
         """Set DB for the model"""
 
         database = db
+
+    def is_part_of_notebook(self) -> bool:
+        """Returns True if the QAPair is part of a notebook."""
+        return self.notebook_id is not None
 
     @classmethod
     def get_by_source_id(cls, source_id: str) -> "QAPair":
@@ -252,7 +296,9 @@ class QAPair(Model):
             question=generation.rag_request.query,
             answer=generation.get_answer(False),
             evals={},
-            metadata={},
+            metadata=generation.rag_response.metadata
+            if generation.rag_response
+            else {},
             source_id=generation.uuid,
             generation=generation.model_dump_json(),
         )
@@ -262,10 +308,14 @@ class QAPair(Model):
         gen_dict = json.loads(self.generation)
         rag_request = RAGRequest(**gen_dict["rag_request"])
         rag_response = RAGResponse(**gen_dict["rag_response"])
+        processed_generation_data = ProcessedGenerationData(
+            **gen_dict["processed_generation_data"]
+        )
         return EndToEndGeneration(
             config=gen_dict["config"],
             rag_request=rag_request,
             rag_response=rag_response,
+            processed_generation_data=processed_generation_data,
             error=gen_dict["error"],
             uuid=gen_dict["uuid"],
         )
@@ -286,6 +336,7 @@ class RAGRequest(BaseModel):
     prompt_template: str = "FAITHFULQA_SCHIMANSKI_CITATION_QA_TEMPLATE_MODIFIED"
     retrieval_window: int = 1
     config: Optional[str] = "src/configs/answer_config.yaml"
+    notebook_uuid: Optional[str] = None
 
     def as_scenario(self, dc: DocumentController) -> Scenario:
         """Returns the RAGRequest as a Scenario object."""
@@ -314,6 +365,20 @@ class RAGRequest(BaseModel):
         )
 
 
+def refused_answer(text: str = "") -> bool:
+    """
+    Whether the model refused to answer the question.
+
+    Use heuristics on the generated text to determine this.
+    """
+    refusal_phrases = ["do not provide information", "cannot provide an answer"]
+
+    if any(phrase in text.lower() for phrase in refusal_phrases):
+        return True
+
+    return False
+
+
 class RAGResponse(BaseModel):
     """Response object for the RAG pipeline"""
 
@@ -321,7 +386,7 @@ class RAGResponse(BaseModel):
     retrieved_documents: list[dict]
     query: str
     highlights: Optional[list[str]] = None
-    metadata: Optional[dict] = None
+    metadata: dict = {}
 
     # LangChain uses pydantic v1 internally, so can't pass LangChainDocuments here
 
@@ -342,27 +407,7 @@ class RAGResponse(BaseModel):
 
         Use heuristics on the generated text to determine this.
         """
-
-        refusal_phrases = ["do not provide information", "cannot provide an answer"]
-
-        if any(phrase in self.text.lower() for phrase in refusal_phrases):
-            return True
-
-        return False
-
-    def extract_inner_monologue(self) -> dict:
-        """Extract the inner monologue from the RAG answer. Inner monologue is the text between #COT# and #/COT#"""
-        result = {
-            "inner_monologue": "",
-            "answer": "",
-        }
-        if "#COT#" in self.text and "#/COT#" in self.text:
-            result["inner_monologue"] = self.text.split("#COT#")[1].split("#/COT#")[0]
-            result["answer"] = self.text.split("#/COT#")[1]
-        else:
-            result["answer"] = self.text
-
-        return result
+        return refused_answer(self.text)
 
     def retrieved_passages_as_string(self) -> str:
         """Returns a string representation of the retrieved passages."""
@@ -403,11 +448,20 @@ class RAGResponse(BaseModel):
             item["metadata"]["page_number"] = api_item["page_number"]
 
 
+class Citation(BaseModel):
+    """Represents a single evidence retrieved passage and its citation index in the LLM response"""
+
+    citation_idx: int
+    cited: bool = True
+    text: str
+    highlight: str = ""
+
+
 class AssertionModel(BaseModel):
     """Model for assertions extracted from RAG responses."""
 
     assertion: str
-    citations: list[str]
+    citations: list[Citation]
     uuid: Optional[str] = ""
 
     @model_validator(mode="before")
@@ -419,35 +473,46 @@ class AssertionModel(BaseModel):
         assert "citations" in data, "Citations must be provided"
         assert isinstance(
             data["citations"], list
-        ), "Citations must be a list of strings"
+        ), "Citations must be a list of Citations"
 
         if "uuid" not in data:
             data["uuid"] = str(uuid.uuid4())
         return data
 
-    def to_atomic_assertions(self) -> list["AssertionModel"]:
-        """Returns a list of AssertionModels with a single assertion and a single citation representing all assertion<->citation pairs (e.g. thing [1,2] returns thing [1] and thing [2])"""
-        atomic_assertions = []
-
-        for citation in self.citations:
-            atomic_assertion = AssertionModel(
-                assertion=self.assertion,
-                citations=[citation],
-                uuid=self.uuid,  # Use for parent
-            )
-            atomic_assertions.append(atomic_assertion)
-
-        assert len(atomic_assertions) > 0, "No atomic assertions created"
-
-        return atomic_assertions
-
     def citations_as_string(self) -> str:
         """Returns a string representation of the citations."""
-        return ",\n".join(self.citations)
+        return ",\n".join([citation.text for citation in self.citations])
 
     def __str__(self) -> str:
         """Returns a string representation of the AssertionModel object."""
         return f"AssertionModel(assertion={self.assertion}, citations={self.citations})"
+
+
+class ProcessedGenerationData(BaseModel):
+    """Processed generation data"""
+
+    final_answer: str
+    inner_monologue: str
+    assertions: list[AssertionModel]
+    cited_documents: list[Citation]
+    other_documents: list[Citation]
+
+
+def _strip_inner_ai_monologue(text: str) -> Tuple[str, str]:
+    """Strips the inner monologue from the RAG answer. Inner monologue is the text between #COT# and #/COT#. Returns as (monologue, answer)"""
+    # Some quick LLMS ARE UNRULY CHILDREN checks
+    if "# /COT#" in text:
+        text = text.replace("# /COT#", "#/COT#")
+    if "#/COT #" in text:
+        text = text.replace("#/COT #", "#/COT#")
+
+    if "#COT#" in text and "#/COT#" in text:
+        return (
+            text.split("#COT#")[1].split("#/COT#")[0],
+            text.split("#/COT#")[1],
+        )
+    else:
+        return ("", text)
 
 
 class EndToEndGeneration(BaseModel):
@@ -460,6 +525,7 @@ class EndToEndGeneration(BaseModel):
     config: dict
     rag_request: RAGRequest
     rag_response: Optional[RAGResponse] = None
+    processed_generation_data: Optional[ProcessedGenerationData] = None
     error: Optional[str] = None
     uuid: Optional[str] = None
 
@@ -469,60 +535,89 @@ class EndToEndGeneration(BaseModel):
             f"EndToEndGeneration({self.rag_request.query}, {self.rag_response.__str__})"
         )
 
-    @classmethod
-    def simple_holder(cls, query: str, answer: str, context: list[str]):
-        """Returns an E2E model with just query, answer, and context string"""
-        return cls(
-            config={},
-            rag_request=RAGRequest(
-                query=query,
-                document_id="",
-            ),
-            rag_response=RAGResponse(
-                text=answer,
-                retrieved_documents=context,  # type: ignore
-                query=query,
-            ),
-            error=None,
-            uuid=str(uuid.uuid4()),
-        )
-
     def get_answer(self, remove_cot: bool = True) -> str:
         """Returns the answer from the RAG response. If remove_cot is True, the inner monologue is removed before returning, otherwise the full response is returned."""
         if self.rag_response is None:
             return ""
 
         if remove_cot:
-            return self.rag_response.extract_inner_monologue()["answer"]
+            return self.extract_inner_monologue()[1]
 
         return self.rag_response.text
+
+    def has_response(self) -> bool:
+        """Returns True if the RAG response is not None."""
+        return self.rag_response is not None
+
+    def has_documents(self) -> bool:
+        """Returns True if the RAG response has documents."""
+        return (
+            self.rag_response is not None
+            and self.rag_response.retrieved_documents is not None
+        )
+
+    def get_documents(self) -> list[dict]:
+        """Returns the retrieved documents from the RAG response. Returns empty list if no documents."""
+        if not self.has_documents():
+            return []
+
+        return self.rag_response.retrieved_documents  # type: ignore
+
+    def extract_inner_monologue(self) -> Tuple[str, str]:
+        """
+        Extract the inner monologue from the RAG answer. Inner monologue is the text between #COT# and #/COT#.
+
+        TODO Work out how to do this without duplicating code with builder cos its inelegant. But tired soz.
+        """
+        if self.rag_response is None:
+            raise ValueError("RAG response is None")
+
+        try:
+            return _strip_inner_ai_monologue(self.rag_response.text)
+        except Exception:
+            return ("", self.rag_response.text)
+
+    def add_metadata(self, key: str, value: Any):
+        """Adds a key-value pair to the metadata dictionary."""
+        if self.rag_response is None:
+            raise ValueError("RAG response is None")
+        self.rag_response.metadata[key] = value
+        return self
+
+    def add_metadata_list_item(self, key: str, value: Any):
+        """Adds a value to a list in the metadata dictionary."""
+        if self.rag_response is None:
+            raise ValueError("RAG response is None")
+
+        if self.rag_response.metadata.get(key) is None:
+            self.rag_response.metadata[key] = []
+        self.rag_response.metadata[key].append(value)
+        return self
 
     @model_validator(mode="before")
     @classmethod
     def set_uuid(cls, data: dict) -> dict:
         """Sets the UUID for the query."""
-        query = data["rag_request"].query
-        response = data["rag_response"].text if data.get("rag_response") else "None"
-        document_id = data["rag_request"].document_id
 
         if data.get("uuid") is None:
-            _unique_id = "_".join([query, response, document_id])
-            data["uuid"] = hashlib.md5(_unique_id.encode()).hexdigest()
+            data["uuid"] = str(uuid.uuid4())
         return data
 
     def to_db_model(self, tag: str, query_id: Optional[str] = None) -> QAPair:
         """Converts the EndToEndGeneration object to a QAPair object."""
+        logger.info(f"Saving generation {self.uuid} to database")
         return QAPair(
             document_id=self.rag_request.document_id,
             model=self.rag_request.model,
             prompt=self.rag_request.prompt_template,
             pipeline_id=tag,
+            source_id=self.uuid,
             question=self.rag_request.query,
             query_id=query_id,
             answer=self.get_answer(False),
             evals={},
             metadata={},
-            generation=json.dumps(self.model_dump()),
+            generation=json.dumps(self.model_dump(serialize_as_any=True)),
         )
 
 
