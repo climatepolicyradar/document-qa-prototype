@@ -77,12 +77,11 @@ def generate_topics_for_document(
     doc_json = get_file_from_s3(s3_bucket, f"{s3_prefix_path}/{doc_id}.json")
 
     doc_dict = json.loads(doc_json)
-    document_id = doc_dict["document_id"]
 
     try:
         logger.info("Initializing RAG controller")
         rc = RagController()
-        logger.info(f"Generating topics for {document_id} with tag {tag}")
+        logger.info(f"Generating topics for {doc_id} with tag {tag}")
 
         first_pages_text = get_page_text(doc_dict, FIRST_N_PAGES)
         first_pages_text = get_first_n_words(first_pages_text, MAX_WORDS_IN_TEXT)
@@ -91,10 +90,10 @@ def generate_topics_for_document(
 
         logger.info(f"Created {len(topics)} topics")
     except Exception as e:
-        logger.error(f"Error generating queries for {document_id}: {e}")
+        logger.error(f"Error generating queries for {doc_id}: {e}")
         raise e
 
-    output_json = {"document_id": document_id, "topics": topics}
+    output_json = {"document_id": doc_id, "topics": topics}
 
     push_file_to_s3(
         bucket_name=s3_bucket,
