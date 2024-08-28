@@ -13,6 +13,108 @@ from src.flows.get_db import get_db
 from src.models.data_models import Prompt, QAPair, Scenario
 from peewee import fn
 
+eval_keys = [
+    "g_eval-faithfulness_gpt4o",
+    "g_eval-faithfulness_gemini",
+    "g_eval-faithfulness_llama3",
+    "patronus_lynx-faithfulness",
+    "vectara-faithfulness",
+]
+
+eval_map = {
+    "g_eval-faithfulness_gpt4o": "g_eval_faithfulness_gpt4o",
+    "g_eval-faithfulness_gemini": "g_eval_faithfulness_gemini",
+    "g_eval-faithfulness_llama3": "g_eval_faithfulness_llama3",
+    "patronus_lynx-faithfulness": "patronus_lynx",
+    "vectara-faithfulness": "vectara",
+}
+
+
+@flow
+def process_complete_evals_for_answers(
+    tag: str = "g_eval_comparison_experiment_2", limit: int = 15
+):
+    db = get_db()
+    logger = get_run_logger()
+
+    for i in range(limit):
+        job = get_queue_job(tag, job_is_json=False)
+        id = job["body"]
+
+        if job is None:
+            logger.info("📋 Could not get job from queue")
+            break
+
+        logger.info(f"📋 Job: {job}")
+
+        answer = get_answer_by_id(db, id)
+        gen = answer.to_end_to_end_generation()
+
+        logger.info(f"📋 Answer: {answer.answer}")
+
+        evals_needed = []
+        for eval_key in eval_keys:
+            if eval_key not in answer.evals:
+                evals_needed.append(eval_key)
+
+        if len(evals_needed) > 0 and not gen.rag_response.refused_answer():
+            logger.info(f"📋 Evals needed: {evals_needed}")
+
+            ec_keys = [eval_map[eval_key] for eval_key in evals_needed]
+            logger.info(f"📋 EC keys: {ec_keys}")
+            ec = EvaluationController()
+            ec.set_evaluators(ec_keys)
+
+            """
+            result = ec.evaluate_all(answer.to_end_to_end_generation())
+            logger.info(f"📋 Result: {result}")
+            
+            for score in result:
+                answer.evals[f"{score.name}-{score.type}"] = score.model_dump_json()
+            """
+
+
+@flow
+def queue_complete_evals_for_answers(tag: str = "g_eval_comparison_experiment_2"):
+    logger = get_run_logger()
+
+    answers = QAPair.select().where(QAPair.pipeline_id == tag)
+
+    needed_evals = []
+    for answer in answers:
+        logger.info(f"📋 Completing evals for answer {answer.id}")
+
+        row = {"id": answer.id, "prompt": answer.prompt, "model": answer.model}
+        for eval_key in eval_keys:
+            row[eval_key] = ""
+
+        if answer.evals is None or len(answer.evals) == 0:
+            logger.info(f"📋 Answer {answer.id} has no evals")
+            for eval_key in eval_keys:
+                row[eval_key] = "1"
+            needed_evals.append(row)
+
+        for eval_key in eval_keys:
+            if eval_key not in answer.evals:
+                row[eval_key] = "1"
+
+        needed_evals.append(row)
+
+        queue_job(tag, answer.id)
+
+    import csv
+    import os
+
+    logger.info(f"🗃️ Dumping {len(needed_evals)} rows to CSV")
+
+    csv_filename = f"needed_evals_{tag}.csv"
+    with open(csv_filename, "w", newline="") as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=needed_evals[0].keys())
+        writer.writeheader()
+        writer.writerows(needed_evals)
+
+    logger.info(f"📄 CSV dumped to {os.path.abspath(csv_filename)}")
+
 
 @flow
 def actually_well_setup_evals_experiments(
@@ -222,4 +324,4 @@ def process_faithfulness_experiment_answer_job(
 
 
 if __name__ == "__main__":
-    process_eval_experiment_from_queue()
+    process_complete_evals_for_answers()

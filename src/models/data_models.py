@@ -307,8 +307,10 @@ class QAPair(Model):
         gen_dict = json.loads(self.generation)
         rag_request = RAGRequest(**gen_dict["rag_request"])
         rag_response = RAGResponse(**gen_dict["rag_response"])
-        processed_generation_data = ProcessedGenerationData(
-            **gen_dict["processed_generation_data"]
+        processed_generation_data = (
+            ProcessedGenerationData(**gen_dict["processed_generation_data"])
+            if "processed_generation_data" in gen_dict
+            else None
         )
         return EndToEndGeneration(
             config=gen_dict["config"],
