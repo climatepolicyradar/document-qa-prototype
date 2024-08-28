@@ -10,7 +10,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
 
     steps:
       - name: Check out repository code
@@ -24,11 +24,7 @@ jobs:
         with:
           python-version: "3.10"
           cache: "poetry"
-
-      - name: Install dependencies
-        run: |
-          poetry install
-
+          
       - name: Install dependencies
         run: |
           poetry install && poetry run pre-commit install
@@ -37,12 +33,6 @@ jobs:
         run: |
           poetry run python -m nltk.downloader stopwords
           poetry run python -m nltk.downloader punkt
-
-      - name: Install guardrails dependencies
-        run: |
-          poetry run guardrails hub install hub://guardrails/detect_pii
-          poetry run guardrails hub install hub://guardrails/toxic_language
-          poetry run guardrails hub install hub://guardrails/web_sanitization
 
       - name: Run test suite
         env:

@@ -1,114 +1,100 @@
-from enum import Enum
-from guardrails import Guard, OnFailAction
-from guardrails.hub import ToxicLanguage, DetectPII, WebSanitization
+# from guardrails import Guard, OnFailAction
+# from guardrails.hub import ToxicLanguage, DetectPII, WebSanitization
 
 from src import config  # needed to load secrets from AWS credentials manager
+from src.logger import get_logger
+
+import requests
+from typing import Dict
+from pydantic import BaseModel, Field
+import json
 
 assert config
 
+LOGGER = get_logger(__name__)
 
-class GuardrailType(Enum):
-    """Available guardrail types"""
 
-    TOXICITY = "toxicity"
-    PII = "pii"
-    WEB_SANITIZATION = "web_sanitization"
+class GuardrailValidationRequest(BaseModel):
+    """Request to validate text against guardrails."""
+
+    text: str = Field(..., description="Text to validate against guardrails")
+
+
+class GuardrailValidationResponse(BaseModel):
+    """Response from guardrails API"""
+
+    overall_result: bool
+    individual_results: Dict[str, bool]
+
+    def to_json(self):
+        """Convert the response to JSON."""
+        return {
+            "overall_result": self.overall_result,
+            "individual_results": self.individual_results,
+        }
+
+
+# Monkey-patch the JSONEncoder (peewee basically has trouble serialising basemodels)
+def _default(self, obj):
+    return getattr(obj.__class__, "to_json", _default.default)(obj)  # type: ignore
+
+
+_default.default = json.JSONEncoder().default
+json.JSONEncoder.default = _default  # type: ignore
 
 
 class GuardrailController:
-    """Create multiple guardrails and use these to validate text."""
-
-    guardrails: dict[GuardrailType, Guard]
+    """Controller for interacting with the Guardrails API."""
 
     def __init__(
-        self,
-        guardrail_types: list[GuardrailType] = [
-            GuardrailType.TOXICITY,
-            GuardrailType.PII,
-            GuardrailType.WEB_SANITIZATION,
-        ],
+        self, api_url: str = "https://guardrails-api.labs.climatepolicyradar.org"
     ):
-        # At the moment we hardcode guardrails-ai to not raise exceptions, preferring to handle output objects instead
-        self._on_fail_action = OnFailAction.NOOP
-        print("Initialising guardrails...")
-        self.guardrails: dict[GuardrailType, Guard] = {
-            guardrail_type: self.create_guardrail(guardrail_type)
-            for guardrail_type in guardrail_types
-        }
+        """
+        Initializes the GuardrailController with the given API URL.
 
-    def _create_web_sanitization_guard(self) -> Guard:
-        return Guard().use(WebSanitization, on_fail=self._on_fail_action)
+        Args:
+            api_url (str): The URL of the Guardrails API.
+        """
+        self.api_url = api_url
+        LOGGER.info(f"🛡️ Initialized GuardrailController with API URL: {self.api_url}")
 
-    def _create_toxicity_guard(self, threshold: float = 0.5) -> Guard:
-        return Guard().use(
-            ToxicLanguage,
-            threshold=threshold,
-            validation_method="sentence",
-            on_fail=self._on_fail_action,
-        )
+    def validate(self, text: str) -> GuardrailValidationResponse:
+        """
+        Validates the input text against all guardrails.
 
-    def _create_pii_guard(self) -> Guard:
-        """Create PII guard with default entity types"""
+        Args:
+            text (str): The text to validate.
 
-        entity_types = [
-            "CREDIT_CARD",
-            "CRYPTO",
-            "EMAIL_ADDRESS",
-            "IBAN_CODE",
-            "IP_ADDRESS",
-            "NRP",
-            "PHONE_NUMBER",
-            "MEDICAL_LICENSE",
-            "US_BANK_NUMBER",
-            "US_DRIVER_LICENSE",
-            "US_ITIN",
-            "US_PASSPORT",
-            "US_SSN",
-            "UK_NHS",
-            "AU_ABN",
-            "AU_ACN",
-            "AU_TFN",
-            "AU_MEDICARE",
-            "IN_PAN",
-            "IN_AADHAAR",
-            "IN_VEHICLE_REGISTRATION",
-            "IN_VOTER",
-            "IN_PASSPORT",
-        ]
+        Returns:
+            GuardrailValidationResponse: The validation results.
 
-        return Guard().use(DetectPII, entity_types, on_fail=self._on_fail_action)
+        Raises:
+            requests.RequestException: If the API request fails.
+            ValueError: If the API response is invalid.
+        """
+        LOGGER.info(f"🔍 Validating text against guardrails: {text[:50]}...")
 
-    def create_guardrail(self, guardrail_type: GuardrailType, **kwargs) -> Guard:
-        """Get a guardrail based on the type"""
-        if guardrail_type == GuardrailType.TOXICITY:
-            return self._create_toxicity_guard(**kwargs)
-        elif guardrail_type == GuardrailType.PII:
-            return self._create_pii_guard(**kwargs)
-        elif guardrail_type == GuardrailType.WEB_SANITIZATION:
-            return self._create_web_sanitization_guard(**kwargs)
-
-    def _validate_text_individual_guardrail(self, text: str, guardrail: Guard) -> bool:
-        if self._on_fail_action != OnFailAction.NOOP:
-            raise NotImplementedError(
-                "On fail action other than NOOP is not supported for individual guardrail validation"
+        try:
+            response = requests.post(
+                f"{self.api_url}/validate",
+                json=GuardrailValidationRequest(text=text).model_dump(),
             )
+            response.raise_for_status()
+            data = response.json()
 
-        result = guardrail.validate(text)
+            validation_response = GuardrailValidationResponse(**data)
+            LOGGER.info(
+                f"✅ Guardrail validation complete. Overall result: {validation_response.overall_result}"
+            )
+            return validation_response
 
-        return result.validation_passed
+        except requests.RequestException as e:
+            LOGGER.error(f"❌ Guardrail API request failed: {str(e)}")
+            raise e
+        except ValueError as e:
+            LOGGER.error(f"❌ Invalid response from Guardrail API: {str(e)}")
+            raise e
 
-    def validate_text(self, text: str) -> tuple[bool, dict[GuardrailType, bool]]:
-        """
-        Validate text against all guardrails
-
-        :param text: text to validate
-        :return: overall validation result and individual guardrail results by name
-        """
-        individual_results = {
-            guardrail_type: self._validate_text_individual_guardrail(text, guardrail)
-            for guardrail_type, guardrail in self.guardrails.items()
-        }
-
-        overall_result = all(individual_results.values())
-
-        return overall_result, individual_results
+    def __str__(self) -> str:
+        """Returns a string representation of the GuardrailController."""
+        return f"GuardrailController(api_url={self.api_url})"

@@ -39,5 +39,10 @@ class GEvalPolicy(GEval):
         )
 
     def get_success(self, score: float) -> bool:
-        """Returns whether the score is a success for this evaluator"""
-        return score <= 0.2
+        """
+        Returns whether the score is a success for this evaluator.
+
+        Note this is the un-normalised score between 1 and 5, where 1 means there
+        is not a policy violation and 5 means there is a policy violation.
+        """
+        return score <= 2
