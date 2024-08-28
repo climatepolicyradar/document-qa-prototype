@@ -29,6 +29,7 @@ class EndToEndGenerationBuilder:
     cited_documents: list[Citation] = []
     other_documents: list[Citation] = []
     metadata: dict = {}
+    page_number_cache: dict = {}
 
     def __call__(self):
         """
@@ -115,6 +116,39 @@ class EndToEndGenerationBuilder:
             self.add_metadata_list_item("errors", "Could not strip inner monologue")
             return ("", text)
 
+    def _get_citation_label(self, doc: dict) -> str:
+        """
+        Returns a string label for the citation.
+
+        Currently, the format is 'Pg. 1a' or 'ref. (a)', the latter when the page number is not present. Multiple references on one page will be Pg. 1b, Pg. 1c etc.
+        """
+        page_number = (
+            doc["metadata"]["text_block_page"]
+            if "text_block_page" in doc["metadata"]
+            and doc["metadata"]["text_block_page"] is not None
+            else None
+        )
+
+        if page_number is not None:
+            if page_number not in self.page_number_cache:
+                self.page_number_cache[page_number] = 1
+            else:
+                self.page_number_cache[page_number] += 1
+
+            # Convert number of times we've seen this page number to alphabetical labels
+            alpha_label = chr(
+                96 + self.page_number_cache[page_number]
+            )  # 'a' is 97 in ASCII
+
+            return f"Pg. {page_number}{alpha_label}"
+
+        if "NA" not in self.page_number_cache:
+            self.page_number_cache["NA"] = 1
+        else:
+            self.page_number_cache["NA"] += 1
+        alpha_label = chr(96 + self.page_number_cache["NA"])  # 'a' is 97 in ASCII
+        return f"ref. ({alpha_label})"
+
     def _setup_citations(self, answer: str):
         """Sets up the citations."""
         # Extract the assertion sentences and the indices of the citations for them
@@ -131,6 +165,7 @@ class EndToEndGenerationBuilder:
             # Set up other documents list and mark which ones are cited
             self.cited_documents = []
             self.other_documents = []
+            self.page_number_cache = {}
 
             for i, doc in enumerate(self.retrieved_documents):
                 # INDEXES ARE A NIGHTMARE. CHANGE AT YOUR PERIL.
@@ -139,6 +174,7 @@ class EndToEndGenerationBuilder:
                 doc["citation_idx"] = actual_idx
                 cited = True if actual_idx in unique_indices else False
                 doc["cited"] = cited
+                doc["citation_label"] = self._get_citation_label(doc)
 
                 if cited:
                     self.cited_documents.append(
@@ -171,14 +207,18 @@ class EndToEndGenerationBuilder:
         This should trigger the answer refused logic in src.data_models.refused_answer
         and in auto-eval.
         """
-        return "I cannot provide an answer."
+        return "I cannot provide an answer based on the document."
 
     def hydrate_from_rag_chain_response(self, rag_chain_response: dict):
         """Pulls in data from the rag chain response"""
         self.query = rag_chain_response["query_str"]
 
         self.set_retrieved_documents(rag_chain_response["documents"])
-        self.set_answer(rag_chain_response["answer"])
+
+        if len(rag_chain_response["documents"]) == 0:
+            self.set_answer(self.no_response_default_answer)
+        else:
+            self.set_answer(rag_chain_response["answer"])
 
         return self
 
