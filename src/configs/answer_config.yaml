@@ -3,10 +3,10 @@ models:
     model: llama3-1-70b-instruct
 model_selection: random
 prompt_templates:
-  - prompt_template: api-prompts/basic_answer_refined
+  - prompt_template: api-prompts/chain_of_thought
 template_selection: all
 retrieval:
   - retrieval_window: 0
-    top_k: 6
+    top_k: 10
 retrieval_selection: random
 documents_per_query: 1 # set this to 1 if the query file contains document ids

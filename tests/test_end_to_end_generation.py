@@ -1,5 +1,7 @@
 import pytest
 from src.models.data_models import EndToEndGeneration, RAGRequest, RAGResponse
+from src.models.builders import EndToEndGenerationBuilder
+from src.models.data_models import refused_answer
 
 
 @pytest.fixture
@@ -45,3 +47,18 @@ def test_get_answer_no_rag_response():
     )
     answer = generation.get_answer()
     assert answer == ""
+
+
+def test_get_answer_no_retrieved_documents():
+    generation = EndToEndGenerationBuilder()
+    generation.hydrate_from_rag_chain_response(
+        {
+            "query_str": "test query",
+            "answer": "test answer",
+            "documents": [],
+        }
+    )
+
+    answer = generation.answer
+
+    assert refused_answer(answer) is True

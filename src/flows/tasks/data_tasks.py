@@ -5,7 +5,7 @@ from peewee import Database, fn
 
 from src.controllers.VespaController import VespaController
 from src.models.data_models import EndToEndGeneration, Notebook, Query, QAPair, DBQuery
-from src.flows.utils import get_db
+from src.flows.get_db import get_db
 from prefect.tasks import exponential_backoff
 
 
