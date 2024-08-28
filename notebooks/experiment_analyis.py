@@ -49,7 +49,7 @@ def aggregate_and_print_results(
     title: Optional[str],
     update_evals: bool = False,
     markdown: bool = False,
-) -> pd.DataFrame:
+) -> tuple[pd.DataFrame, str]:
     """
     Aggregates and prints the results for a given set of attributes based on the evals and qa-pairs dataframes
 
@@ -69,30 +69,31 @@ def aggregate_and_print_results(
     Returns:
         pd.DataFrame: The updated evals dataframe if update_evals is True, otherwise the evals dataframe -- this is used for filtering
             purposes given the sequential nature of the analysis
+        str: the printable version of the results
     """
     if title:
-        print(f"{title}\n\n")
+        out_str = f"##{title}\n\n"
+    else:
+        out_str = ""
 
     positives = evals[filter_func(evals)]
     positive_df = df[df["id"].isin(positives.index)]
 
     _df = df[df["id"].isin(evals.index)]
 
-    print(
-        f"Total number of positives: {len(positive_df)} out of {len(_df)}, ({len(positive_df) / len(_df) * 100:.2f}%)"
-    )
-
+    out_str += f"**Total number of positives: {len(positive_df)} out of {len(_df)}, ({len(positive_df) / len(_df) * 100:.2f}%)**"
+    
     for attribute, aggregation in attributes_to_breakdown.items():
-        print(f"\n{attribute} as {aggregation}:")
+        out_str += f"\n{attribute} as {aggregation}:"
         printable = breakdown_for_attribute(
             positive_df, _df, evals, attribute, aggregation, markdown
         )
-        print(f"{printable}\n")
+        out_str += f"{printable}\n"
 
     if update_evals:
-        return evals[~evals.index.isin(positives.index)]
+        return evals[~evals.index.isin(positives.index)], out_str
     else:
-        return evals
+        return evals, out_str
 
 
 def filter_sequence(
@@ -158,6 +159,6 @@ def breakdown_for_attribute(
     else:
         raise ValueError("Invalid aggregation type")
 
-    printable = pd.DataFrame(printable.sort_values(ascending=False)).T
+    printable = pd.DataFrame(printable.sort_values(ascending=False)).T.round(4)
 
     return printable if not markdown else printable.to_markdown()
