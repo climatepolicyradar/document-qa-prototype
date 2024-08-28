@@ -119,7 +119,12 @@ def do_rag(request: RAGRequest) -> dict:
     if result.rag_response.metadata.get("guardrails_failed"):
         return result.model_dump()
 
-    if result.rag_response.refused_answer():
+    # Only try to summarise retrieved passages ('no answer flow') if there are
+    # passages to summarise and the answer was refused
+    if (
+        result.rag_response.refused_answer()
+        and len(result.rag_response.retrieved_documents) > 0
+    ):
         result = app_context["rag_controller"].execute_no_answer_flow(result)
 
     try:
