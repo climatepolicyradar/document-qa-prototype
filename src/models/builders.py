@@ -29,6 +29,7 @@ class EndToEndGenerationBuilder:
     cited_documents: list[Citation] = []
     other_documents: list[Citation] = []
     metadata: dict = {}
+    page_number_cache: dict = {}
 
     def __call__(self):
         """
@@ -115,6 +116,37 @@ class EndToEndGenerationBuilder:
             self.add_metadata_list_item("errors", "Could not strip inner monologue")
             return ("", text)
 
+    def _get_citation_label(self, doc: dict) -> str:
+        """Returns a string label for the citation."""
+        page_number = (
+            doc["metadata"]["text_block_page"]
+            if "text_block_page" in doc["metadata"]
+            and doc["metadata"]["text_block_page"] is not None
+            else None
+        )
+        print(doc)
+        print(self.page_number_cache)
+
+        if page_number is not None:
+            if page_number not in self.page_number_cache:
+                self.page_number_cache[page_number] = 1
+            else:
+                self.page_number_cache[page_number] += 1
+
+            # Convert number of times we've seen this page number to alphabetical labels
+            alpha_label = chr(
+                96 + self.page_number_cache[page_number]
+            )  # 'a' is 97 in ASCII
+
+            return f"Pg. {page_number}{alpha_label}"
+
+        if "NA" not in self.page_number_cache:
+            self.page_number_cache["NA"] = 1
+        else:
+            self.page_number_cache["NA"] += 1
+        alpha_label = chr(96 + self.page_number_cache["NA"])  # 'a' is 97 in ASCII
+        return f"ref. ({alpha_label})"
+
     def _setup_citations(self, answer: str):
         """Sets up the citations."""
         # Extract the assertion sentences and the indices of the citations for them
@@ -131,6 +163,7 @@ class EndToEndGenerationBuilder:
             # Set up other documents list and mark which ones are cited
             self.cited_documents = []
             self.other_documents = []
+            self.page_number_cache = {}
 
             for i, doc in enumerate(self.retrieved_documents):
                 # INDEXES ARE A NIGHTMARE. CHANGE AT YOUR PERIL.
@@ -139,6 +172,7 @@ class EndToEndGenerationBuilder:
                 doc["citation_idx"] = actual_idx
                 cited = True if actual_idx in unique_indices else False
                 doc["cited"] = cited
+                doc["citation_label"] = self._get_citation_label(doc)
 
                 if cited:
                     self.cited_documents.append(
