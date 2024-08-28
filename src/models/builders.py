@@ -176,7 +176,11 @@ class EndToEndGenerationBuilder:
         self.query = rag_chain_response["query_str"]
 
         self.set_retrieved_documents(rag_chain_response["documents"])
-        self.set_answer(rag_chain_response["answer"])
+
+        if len(rag_chain_response["documents"]) == 0:
+            self.set_answer(self.no_response_default_answer)
+        else:
+            self.set_answer(rag_chain_response["answer"])
 
         return self
 

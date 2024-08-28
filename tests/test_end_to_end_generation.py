@@ -59,6 +59,6 @@ def test_get_answer_no_retrieved_documents():
         }
     )
 
-    answer = generation.get_answer()
+    answer = generation.answer
 
     assert refused_answer(answer) is True
