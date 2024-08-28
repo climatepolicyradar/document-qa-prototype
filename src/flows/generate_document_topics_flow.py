@@ -1,15 +1,12 @@
 import os
 from prefect import flow, get_run_logger, task
 import psutil
-from src.controllers.ScenarioController import ScenarioController
 from src.controllers.RagController import RagController
-from src.flows.tasks.data_tasks import show_db_stats
 from prefect.tasks import exponential_backoff
 import argparse
 import json
 
-from peewee import Database
-from src.flows.utils import get_db, get_labs_session
+from src.flows.utils import get_labs_session
 from src.flows.tasks.s3_tasks import (
     get_doc_ids_from_s3,
     get_file_from_s3,
@@ -23,9 +20,9 @@ MAX_WORDS_IN_TEXT = 2000
 
 
 @task(log_prints=True)
-def spawn_document_topic_tasks(doc_ids: list[str], tag: str, config: str):
+def spawn_document_topic_tasks(doc_ids: list[str], tag: str):
     for doc_id in doc_ids:
-        generate_topics_for_document.submit(doc_id, tag, config, get_db())
+        generate_topics_for_document.submit(doc_id, tag)
 
 
 def get_page_text(document: dict, first_n_pages: int) -> str:
@@ -68,15 +65,10 @@ def get_first_n_words(text: str, n_words: int) -> str:
 def generate_topics_for_document(
     doc_id: str,
     tag: str,
-    config: str,
-    db: Database,
     s3_prefix: str = "project-rag/data/cpr_embeddings_output_valid_documents",
 ):
     logger = get_run_logger()
     get_labs_session(set_as_default=True)
-
-    logger.info("Initializing scenario controller")
-    sc = ScenarioController().from_config(config)
 
     logger.info(f"Loading document from s3: {s3_prefix}/{doc_id}")
     s3_bucket = s3_prefix.split("/")[0]
@@ -87,44 +79,39 @@ def generate_topics_for_document(
     doc_dict = json.loads(doc_json)
     document_id = doc_dict["document_id"]
 
-    show_db_stats(db)
-    for scenario in sc:
-        try:
-            logger.info("Initializing RAG controller")
-            rc = RagController()
-            logger.info(f"Generating topics for {document_id} with tag {tag}")
+    try:
+        logger.info("Initializing RAG controller")
+        rc = RagController()
+        logger.info(f"Generating topics for {document_id} with tag {tag}")
 
-            first_pages_text = get_page_text(doc_dict, FIRST_N_PAGES)
-            first_pages_text = get_first_n_words(first_pages_text, MAX_WORDS_IN_TEXT)
+        first_pages_text = get_page_text(doc_dict, FIRST_N_PAGES)
+        first_pages_text = get_first_n_words(first_pages_text, MAX_WORDS_IN_TEXT)
 
-            topics = GetTopicsFromText(rc).process_text(first_pages_text, scenario)
+        topics = GetTopicsFromText(rc).process_text(first_pages_text)
 
-            logger.info(
-                f"Created {len(topics)} topics for {scenario.prompt.prompt_template}"
-            )
-        except Exception as e:
-            logger.error(f"Error generating queries for {document_id}: {e}")
-            raise e
+        logger.info(f"Created {len(topics)} topics")
+    except Exception as e:
+        logger.error(f"Error generating queries for {document_id}: {e}")
+        raise e
 
-        output_json = {"document_id": document_id, "topics": topics}
+    output_json = {"document_id": document_id, "topics": topics}
 
-        push_file_to_s3(
-            bucket_name=s3_bucket,
-            file_path=f"{s3_prefix_path}/{doc_id}_topics.json",
-            file_content=json.dumps(output_json),
-        )
+    push_file_to_s3(
+        bucket_name=s3_bucket,
+        file_path=f"{s3_prefix_path}/{doc_id}_topics.json",
+        file_content=json.dumps(output_json),
+    )
 
 
 @flow(log_prints=True)
 def document_topic_control_flow(
-    config: str,
     limit: int,
     offset: int = 0,
     tag: str = "main_run_28_08_2024_document_topics",
 ):
     logger = get_run_logger()
     logger.info(
-        f"🚀 Starting query control flow with config: {config}, limit: {limit}, offset: {offset}, tag: {tag}"
+        f"🚀 Starting query control flow with config: limit: {limit}, offset: {offset}, tag: {tag}"
     )
     logger.info(
         f"Memory before task: {psutil.Process(os.getpid()).memory_info()[0] / float(1024 * 1024)}MiB"
@@ -132,20 +119,12 @@ def document_topic_control_flow(
 
     doc_ids = get_doc_ids_from_s3()
 
-    spawn_document_topic_tasks(
-        doc_ids[offset : min(offset + limit, len(doc_ids))], tag, config
-    )
+    spawn_document_topic_tasks(doc_ids[offset : min(offset + limit, len(doc_ids))], tag)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate queries for documents")
     parser.add_argument("tag", type=str, help="Tag for grouping queries together")
-    parser.add_argument(
-        "--config",
-        type=str,
-        default="src/configs/experiment_document_topics_1.0.yaml",
-        help="Path to the configuration file",
-    )
     parser.add_argument(
         "--limit",
         type=int,
@@ -157,7 +136,5 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    document_topic_control_flow(
-        config=args.config, tag=args.tag, limit=args.limit, offset=args.offset
-    )
+    document_topic_control_flow(tag=args.tag, limit=args.limit, offset=args.offset)
     # generate_queries_for_document(args.doc_id, args.tag, args.config, get_db())
