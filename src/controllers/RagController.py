@@ -212,6 +212,7 @@ class RagController:
             response = rag_chain_with_source.invoke(
                 {
                     "query_str": query,
+                    "document_id": scenario.document.document_id,
                     "document_metadata_context_str": f"'{scenario.document.document_name}' pub. {scenario.document.document_metadata.publication_ts} (country:{scenario.document.document_metadata.geography})",
                 },
             )
