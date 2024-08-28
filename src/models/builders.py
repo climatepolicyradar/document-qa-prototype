@@ -124,8 +124,6 @@ class EndToEndGenerationBuilder:
             and doc["metadata"]["text_block_page"] is not None
             else None
         )
-        print(doc)
-        print(self.page_number_cache)
 
         if page_number is not None:
             if page_number not in self.page_number_cache:
