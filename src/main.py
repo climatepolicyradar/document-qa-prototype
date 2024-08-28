@@ -122,7 +122,6 @@ def do_rag(request: RAGRequest) -> dict:
     if result.rag_response.refused_answer():
         result = app_context["rag_controller"].execute_no_answer_flow(result)
 
-    result.rag_response.augment_passages_with_metadata(request.document_id)
     try:
         # Save the answer to the database
         db_save = QAPair.from_end_to_end_generation(result, "prototype")

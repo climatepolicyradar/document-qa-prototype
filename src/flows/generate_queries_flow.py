@@ -3,6 +3,7 @@ from prefect import flow, get_run_logger, task
 import psutil
 from src.controllers.RagController import RagController
 from src.controllers.ScenarioController import ScenarioController
+from src.flows.get_db import get_db
 from src.flows.tasks.data_tasks import create_queries, show_db_stats
 from cpr_data_access.models import BaseDocument
 from prefect.utilities.annotations import quote
@@ -11,7 +12,7 @@ import argparse
 import boto3
 
 from peewee import Database
-from src.flows.utils import get_db, get_labs_session
+from src.flows.utils import get_labs_session
 
 # TODO PR this into CPR SDK to allow session to be passed in
 
