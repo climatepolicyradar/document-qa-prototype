@@ -133,6 +133,7 @@ class EndToEndGenerationBuilder:
             self.other_documents = []
 
             for i, doc in enumerate(self.retrieved_documents):
+                # INDEXES ARE A NIGHTMARE. CHANGE AT YOUR PERIL.
                 actual_idx = i
 
                 doc["citation_idx"] = actual_idx
