@@ -117,7 +117,11 @@ class EndToEndGenerationBuilder:
             return ("", text)
 
     def _get_citation_label(self, doc: dict) -> str:
-        """Returns a string label for the citation."""
+        """
+        Returns a string label for the citation.
+
+        Currently, the format is 'Pg. 1a' or 'ref. (a)', the latter when the page number is not present. Multiple references on one page will be Pg. 1b, Pg. 1c etc.
+        """
         page_number = (
             doc["metadata"]["text_block_page"]
             if "text_block_page" in doc["metadata"]
