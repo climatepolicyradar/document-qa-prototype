@@ -120,6 +120,7 @@ def document_topic_control_flow(
     s3_dir = "/".join(s3_prefix.split("/")[1:])
 
     doc_ids = get_doc_ids_from_s3(bucket_name, s3_dir)
+    doc_ids = [_id for _id in doc_ids if "topic" not in _id]
 
     spawn_document_topic_tasks(
         doc_ids[offset : min(offset + limit, len(doc_ids))], tag, s3_prefix
