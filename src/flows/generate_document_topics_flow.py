@@ -10,7 +10,11 @@ import json
 
 from peewee import Database
 from src.flows.utils import get_db, get_labs_session
-from src.flows.tasks.s3_tasks import get_doc_ids_from_s3, get_file_from_s3
+from src.flows.tasks.s3_tasks import (
+    get_doc_ids_from_s3,
+    get_file_from_s3,
+    push_file_to_s3,
+)
 from src.commands.llm_commands import GetTopicsFromText
 
 # TODO: should this be in the config yaml?
@@ -102,7 +106,13 @@ def generate_topics_for_document(
             logger.error(f"Error generating queries for {document_id}: {e}")
             raise e
 
-        # TODO: save topics to s3 bucket
+        output_json = {"document_id": document_id, "topics": topics}
+
+        push_file_to_s3(
+            bucket_name=s3_bucket,
+            file_path=f"{s3_prefix_path}/{doc_id}_topics.json",
+            file_content=json.dumps(output_json),
+        )
 
 
 @flow(log_prints=True)

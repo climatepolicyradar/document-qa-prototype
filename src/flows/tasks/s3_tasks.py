@@ -64,3 +64,15 @@ def get_file_from_s3(
     s3 = session.client("s3")
     response = s3.get_object(Bucket=bucket_name, Key=file_path)
     return response["Body"].read().decode("utf-8")
+
+
+def push_file_to_s3(
+    bucket_name: str,
+    file_path: str,
+    file_content: str,
+    session: boto3.Session = get_labs_session(),
+):
+    logger = get_run_logger()
+    logger.info(f"🚀 Pushing file to s3: {bucket_name}/{file_path}")
+    s3 = session.client("s3")
+    s3.put_object(Bucket=bucket_name, Key=file_path, Body=file_content)
