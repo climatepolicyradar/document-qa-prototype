@@ -169,7 +169,7 @@ class EndToEndGenerationBuilder:
         This should trigger the answer refused logic in src.data_models.refused_answer
         and in auto-eval.
         """
-        return "I cannot provide an answer."
+        return "I cannot provide an answer based on the document."
 
     def hydrate_from_rag_chain_response(self, rag_chain_response: dict):
         """Pulls in data from the rag chain response"""
