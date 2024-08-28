@@ -2,6 +2,7 @@ models:
   - generation_engine: vertex
     model: mistral-nemo
 model_selection: all
+# Note this prompt is not used in the code that calls this – src.commands.llm_commands.GetTopicsFromText is used instead
 prompt_templates:
   - prompt_template: response/generate_topics_from_retrieved_documents
 template_selection: all

@@ -90,7 +90,7 @@ def generate_topics_for_document(
     show_db_stats(db)
     for scenario in sc:
         try:
-            logger.info("Initializing LLM")
+            logger.info("Initializing RAG controller")
             rc = RagController()
             logger.info(f"Generating topics for {document_id} with tag {tag}")
 
