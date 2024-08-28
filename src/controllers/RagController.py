@@ -209,7 +209,7 @@ class RagController:
 
         generation.hydrate_from_rag_chain_response(response)
 
-        LOGGER.info(f"🔍 Running guardrrails on response: {generation.get_answer()}")
+        LOGGER.info(f"🔍 Running guardrails on response: {generation.get_answer()}")
         guardrail_result = self.guardrails.validate(generation.get_answer())
         LOGGER.info(f"🔍 Guardrail result: {guardrail_result}")
 
