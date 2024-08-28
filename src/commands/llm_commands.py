@@ -59,9 +59,12 @@ class GetTopicsFromText(LLMCommand):
             [doc["page_content"] for doc in end_to_end_generation.get_documents()]
         )
 
-        topics = self.rag_controller.run_llm(
-            scenario, {"context_str": retrieved_passages_joined}
-        )
+        return self.process_text(retrieved_passages_joined, scenario)
+
+    def process_text(self, text: str, scenario: Scenario) -> list[str]:
+        """Process the text to remove unwanted characters."""
+
+        topics = self.rag_controller.run_llm(scenario, {"context_str": text})
 
         try:
             topics_list = self._process_extracted_topics(topics)

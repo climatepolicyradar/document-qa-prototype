@@ -1,0 +1,8 @@
+models:
+  - generation_engine: vertex
+    model: mistral-nemo
+model_selection: all
+prompt_templates:
+  - prompt_template: response/generate_topics_from_retrieved_documents
+template_selection: all
+documents_per_query: 1 # set this to 1 if the query file contains document ids
