@@ -9,7 +9,7 @@ from src.flows.queue import queue_job, get_queue_job
 
 from src.flows.tasks.data_tasks import get_answer_by_id, save_answer, get_query_by_id
 from src.flows.tasks.qa_tasks import generate_answer_task
-from src.flows.utils import get_db
+from src.flows.get_db import get_db
 from src.models.data_models import Prompt, QAPair, Scenario
 from peewee import fn
 

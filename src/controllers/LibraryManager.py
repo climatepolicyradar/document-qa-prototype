@@ -28,22 +28,6 @@ class LibraryManager:
         response.raise_for_status()
         return response.json()
 
-    def get_metadata_for_citation(
-        self, document_id: str, text_block_ids: list[int]
-    ) -> dict:
-        """Get metadata for a given citation."""
-        base_joined_ids = "','".join(map(str, text_block_ids))
-        text_block_ids_str = f"'{base_joined_ids}'"
-        url = f"{self.base_url}/full_text/-/query.json"
-        params = {
-            "sql": f"select id, document_id, text_block_id, text, language, type, type_confidence, coords, page_number from text_blocks where document_id = :document_id and text_block_id in ({text_block_ids_str}) order by id limit 10",
-            "document_id": document_id,
-        }
-        print(params)
-        response = requests.get(url, headers=self._get_headers(), params=params)
-        response.raise_for_status()
-        return response.json()["rows"]
-
     def get_document_metadata(self, document_id: str) -> dict:
         """Get metadata for a document."""
         url = f"{self.base_url}/full_text/-/query.json"

@@ -82,7 +82,6 @@ class EndToEndGenerationBuilder:
         self.inner_monologue, self.answer = self._strip_inner_ai_monologue(
             self.raw_answer
         )
-
         self._setup_citations(self.answer)
 
         self.add_metadata("responded", not refused_answer(self.answer))
@@ -101,7 +100,7 @@ class EndToEndGenerationBuilder:
                     for idx in assertion[1]
                 ],
             )
-            for assertion in self._get_cited_document_indices_in_answer(answer)
+            for assertion in self._get_cited_document_indices_in_answer(self.answer)
         ]
 
         return self
@@ -129,15 +128,18 @@ class EndToEndGenerationBuilder:
                     for index in assertion_and_index[1]
                 ]
             )
-            logger.info(f"UNIQUE INDICES: {unique_indices}")
             # Set up other documents list and mark which ones are cited
             self.cited_documents = []
             self.other_documents = []
+
             for i, doc in enumerate(self.retrieved_documents):
-                actual_idx = i + 1
+                # INDEXES ARE A NIGHTMARE. CHANGE AT YOUR PERIL.
+                actual_idx = i
+
                 doc["citation_idx"] = actual_idx
                 cited = True if actual_idx in unique_indices else False
                 doc["cited"] = cited
+
                 if cited:
                     self.cited_documents.append(
                         Citation(
@@ -241,5 +243,4 @@ class EndToEndGenerationBuilder:
             self.add_metadata_list_item("errors", "Could not extract assertions")
             results = []
 
-        logger.info(f"CITED DOCUMENT INDICES: {results}")
         return results
