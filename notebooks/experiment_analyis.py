@@ -95,6 +95,50 @@ def aggregate_and_print_results(
         return evals
 
 
+def filter_sequence(
+    df: pd.DataFrame,
+    evals: pd.DataFrame,
+    filter_funcs: list[tuple[str, str, Callable]],
+    aggregation_column: str,
+    normalised: bool = False,
+) -> pd.DataFrame:
+    """
+    Aggregates and prints the results for a given set of attributes based on the evals and qa-pairs dataframes
+
+    It applies a filter function by which it chooses the 'positives' from the evals dataset. These are usually the violations
+    on some axis of evaluation.
+
+    Args:
+        df: pd.DataFrame: qa-pairs dataframe
+        evals: pd.DataFrame: evals dataframe
+        filter_funcs: list[tuple[str, str, Callable]]: a list of filters in the form of (name, dataframe-to-apply-on, filter) that will be applied in order. They should return True for violation.
+        aggregation_column: str: the column to aggregate the results on
+        normalised: bool: whether to normalise the counts
+        
+    Returns:
+        pd.DataFrame: The updated evals dataframe if update_evals is True, otherwise the evals dataframe -- this is used for filtering
+            purposes given the sequential nature of the analysis
+    """
+    out_df = pd.DataFrame(columns=df[aggregation_column].unique())
+
+    _df = df.copy()
+    for name, applied_on, filter_func in filter_funcs:
+        if applied_on == "evals":
+            positives = evals[filter_func(evals)]
+            positive_df = _df[_df["id"].isin(positives.index)]
+        else:
+            positive_df = _df[filter_func(_df)]
+        _df = _df[~_df["id"].isin(positive_df["id"])]
+        out_df.loc[name] = positive_df[aggregation_column].value_counts()
+
+    out_df.loc["remaining"] = _df[aggregation_column].value_counts()
+
+    if normalised:
+        out_df = out_df.div(out_df.sum(axis=0), axis=1)
+
+    return out_df
+
+
 def breakdown_for_attribute(
     positive_df: pd.DataFrame,
     df: pd.DataFrame,
