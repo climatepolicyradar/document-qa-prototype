@@ -42,7 +42,8 @@ class SummariseDocuments(LLMCommand):
 class GetTopicsFromText(LLMCommand):
     """Gets the topics from the text retrieved by the RAG controller."""
 
-    def _scenario(self) -> Scenario:
+    def get_scenario(self) -> Scenario:
+        """Get the scenario for the command."""
         return Scenario(
             prompt=Prompt.from_template(
                 "response/generate_topics_from_retrieved_documents"
@@ -66,7 +67,7 @@ class GetTopicsFromText(LLMCommand):
     def process_text(self, text: str) -> list[str]:
         """Process the text to remove unwanted characters."""
 
-        topics = self.rag_controller.run_llm(self._scenario, {"context_str": text})
+        topics = self.rag_controller.run_llm(self.get_scenario(), {"context_str": text})
 
         try:
             topics_list = self._process_extracted_topics(topics)

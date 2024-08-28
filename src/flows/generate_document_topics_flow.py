@@ -20,9 +20,9 @@ MAX_WORDS_IN_TEXT = 2000
 
 
 @task(log_prints=True)
-def spawn_document_topic_tasks(doc_ids: list[str], tag: str):
+def spawn_document_topic_tasks(doc_ids: list[str], tag: str, s3_prefix: str):
     for doc_id in doc_ids:
-        generate_topics_for_document.submit(doc_id, tag)
+        generate_topics_for_document.submit(doc_id, tag, s3_prefix)
 
 
 def get_page_text(document: dict, first_n_pages: int) -> str:
@@ -65,7 +65,7 @@ def get_first_n_words(text: str, n_words: int) -> str:
 def generate_topics_for_document(
     doc_id: str,
     tag: str,
-    s3_prefix: str = "project-rag/data/cpr_embeddings_output_valid_documents",
+    s3_prefix: str,
 ):
     logger = get_run_logger()
     get_labs_session(set_as_default=True)
@@ -107,6 +107,7 @@ def document_topic_control_flow(
     limit: int,
     offset: int = 0,
     tag: str = "main_run_28_08_2024_document_topics",
+    s3_prefix: str = "project-rag/data/cpr_embeddings_output_valid_documents",
 ):
     logger = get_run_logger()
     logger.info(
@@ -115,10 +116,14 @@ def document_topic_control_flow(
     logger.info(
         f"Memory before task: {psutil.Process(os.getpid()).memory_info()[0] / float(1024 * 1024)}MiB"
     )
+    bucket_name = s3_prefix.split("/")[0]
+    s3_dir = "/".join(s3_prefix.split("/")[1:])
 
-    doc_ids = get_doc_ids_from_s3()
+    doc_ids = get_doc_ids_from_s3(bucket_name, s3_dir)
 
-    spawn_document_topic_tasks(doc_ids[offset : min(offset + limit, len(doc_ids))], tag)
+    spawn_document_topic_tasks(
+        doc_ids[offset : min(offset + limit, len(doc_ids))], tag, s3_prefix
+    )
 
 
 if __name__ == "__main__":
