@@ -12,6 +12,7 @@ from src.controllers.EvaluationController import EvaluationController
 from src.controllers.RagController import RagController
 from src.controllers.ScenarioController import ScenarioController
 from src.controllers.FeedbackController import FeedbackController
+from src.models.data_models import Score
 from src.logger import get_logger
 from src.models.data_models import FeedbackRequest, RAGRequest, EndToEndGeneration
 from src.online.inference import LLMTypes
@@ -234,6 +235,26 @@ def evaluate_single(eval_id: str, source_id: str):
     mini_ec.set_evaluators([eval_id])
 
     evals = mini_ec.evaluate(gen_model, eval_id)
+    return evals
+
+
+@app.post("/save-evaluations/{source_id}")
+def store_evals(source_id: str, evals: list[Score]):
+    """
+    Store the evaluations for a document.
+
+    Used because we eager load evals individually on the frontend; when it detects all have loaded it punts to this endpoint to save the bundle.
+    """
+    qa_pair = QAPair.get_by_source_id(source_id)
+    if qa_pair is None:
+        raise HTTPException(status_code=404, detail="Answer not found")
+
+    for score in evals:
+        qa_pair.evals[f"{score.name}-{score.type}"] = score.model_dump_json()
+
+    LOGGER.info(f"📋 Evaluations: {qa_pair.evals}")
+    qa_pair.save()
+
     return evals
 
 
