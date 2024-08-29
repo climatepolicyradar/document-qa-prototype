@@ -22,7 +22,7 @@ class LibraryManager:
         """Get all documents from the library."""
         url = f"{self.base_url}/full_text/-/query.json"
         params = {
-            "sql": "select document_id, name, description, slug, family_slug, publication_ts, geography, category, type, source, keyword from documents",
+            "sql": "select document_id, name, description, slug, family_slug, publication_ts, geography, geography_name, geography_region, category, type, source, keyword, suggested_topics from documents",
         }
         response = requests.get(url, headers=self._get_headers(), params=params)
         response.raise_for_status()
