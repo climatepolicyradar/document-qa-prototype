@@ -262,8 +262,8 @@ class EndToEndGenerationBuilder:
         results = []
         try:
             """Get the indices of the cited documents in the answer."""
-            # pattern = r"(.*?)\s*\[([\d,\s]+)\]"  # Looking for [x], [x,y], [x,y,z] etc
-            pattern = r"\[(\d+(?:\s*,\s*\d+)*)\]"
+            pattern = r"(.*?)\s*\[([\d,\s]+)\]"  # Looking for [x], [x,y], [x,y,z] etc
+            # pattern = r"\[(\d+(?:\s*,\s*\d+)*)\]"
             matches = re.findall(pattern, rag_answer)
 
             for sentence, citations in matches:
