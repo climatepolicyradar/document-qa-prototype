@@ -1,6 +1,6 @@
 import uuid
 import pytest
-from src.evaluation.evaluator import Score
+from src.models.data_models import Score
 from src.evaluation.faithfulness.g_eval_faithfulness import GEvalFaithfulness
 
 from unittest.mock import MagicMock

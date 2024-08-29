@@ -89,3 +89,47 @@ paths:
                   uuid:
                     type: string
                     description: Unique identifier for the RAG operation
+
+  /feedback/{generation_uuid}:
+    post:
+      summary: Add feedback for a generation
+      description: Adds user feedback for a specific generation
+      parameters:
+        - in: path
+          name: generation_uuid
+          required: true
+          schema:
+            type: string
+          description: Unique identifier for the generation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                approve:
+                  type: boolean
+                  description: User's approval of the answer (true for thumbs up, false for thumbs down)
+                issues:
+                  type: array
+                  items:
+                    type: string
+                  description: List of issues identified in the answer
+                comments:
+                  type: string
+                  description: Additional comments from the user
+      responses:
+        '200':
+          description: Feedback added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  feedback_id:
+                    type: integer
+        '404':
+          description: Generation not found

@@ -1,7 +1,7 @@
+from fastapi import FastAPI, HTTPException
 from datetime import datetime
 import random
 from pydantic import BaseModel
-from fastapi import FastAPI, HTTPException
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from langchain.globals import set_verbose, set_debug
@@ -11,8 +11,10 @@ from src.controllers.DocumentController import DocumentController
 from src.controllers.EvaluationController import EvaluationController
 from src.controllers.RagController import RagController
 from src.controllers.ScenarioController import ScenarioController
+from src.controllers.FeedbackController import FeedbackController
+from src.models.data_models import Score
 from src.logger import get_logger
-from src.models.data_models import EndToEndGeneration, RAGRequest
+from src.models.data_models import FeedbackRequest, RAGRequest, EndToEndGeneration
 from src.online.inference import LLMTypes
 from src import config
 from src.models.data_models import QAPair
@@ -239,3 +241,37 @@ def evaluate_single(eval_id: str, source_id: str):
 
     evals = mini_ec.evaluate(gen_model, eval_id)
     return evals
+
+
+@app.post("/save-evaluations/{source_id}")
+def store_evals(source_id: str, evals: list[Score]):
+    """
+    Store the evaluations for a document.
+
+    Used because we eager load evals individually on the frontend; when it detects all have loaded it punts to this endpoint to save the bundle.
+    """
+    qa_pair = QAPair.get_by_source_id(source_id)
+    if qa_pair is None:
+        raise HTTPException(status_code=404, detail="Answer not found")
+
+    for score in evals:
+        qa_pair.evals[f"{score.name}-{score.type}"] = score.model_dump_json()
+
+    LOGGER.info(f"📋 Evaluations: {qa_pair.evals}")
+    qa_pair.save()
+
+    return evals
+
+
+@app.post("/feedback/{generation_uuid}")
+async def add_feedback(generation_uuid: str, feedback: FeedbackRequest):
+    """Add feedback for a specific generation."""
+    qa_pair = QAPair.get_by_source_id(generation_uuid)
+    if qa_pair is None:
+        raise HTTPException(status_code=404, detail="Answer not found")
+
+    feedback_instance = FeedbackController.add_feedback(qa_pair, feedback)
+    return {
+        "message": "Feedback added successfully",
+        "feedback_id": feedback_instance.id,
+    }
