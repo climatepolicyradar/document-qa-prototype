@@ -8,7 +8,7 @@ from nltk.tokenize import sent_tokenize
 from src.evaluation.evaluator import Evaluator
 from src.models.data_models import EndToEndGeneration
 from src.controllers.EvaluationController import evaluators
-from src.evaluation.evaluator import Score
+from src.models.data_models import Score
 from src.logger import get_logger
 
 import nltk

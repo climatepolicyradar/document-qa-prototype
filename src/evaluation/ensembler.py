@@ -4,7 +4,7 @@ from typing import Optional, Callable
 import numpy as np
 import pandas as pd
 
-from src.evaluation.evaluator import Score
+from src.models.data_models import Score
 from src.logger import get_logger
 
 

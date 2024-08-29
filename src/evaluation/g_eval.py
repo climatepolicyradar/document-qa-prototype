@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 
 from src.evaluation.evaluator import Evaluator
 from src.models.data_models import EndToEndGeneration
-from src.evaluation.evaluator import Score
+from src.models.data_models import Score
 from src.logger import get_logger
 from src.online.inference import get_llm
 
