@@ -2,7 +2,7 @@
 import json
 import base64
 import logging
-from pydantic import BaseModel, FilePath
+from pydantic import BaseModel
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ class ServiceAccountCredentials(BaseModel):
     universe_domain: str
 
 
-def load_and_encode_credentials(file_path: FilePath) -> str:
+def load_and_encode_credentials(file_path: str) -> str:
     """Load the service account credentials from a JSON file and return the base64 encoded string."""
     try:
         with open(file_path, "r") as file:
