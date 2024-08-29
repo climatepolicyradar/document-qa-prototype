@@ -1,7 +1,7 @@
 from enum import Enum
 import json
 import jinja2
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, confloat, model_validator
 from typing import Any, Optional, Tuple
 import datetime
 from wandb.sdk.data_types.trace_tree import Trace
@@ -250,6 +250,17 @@ class Notebook(Model):
         database = db
 
 
+class Score(BaseModel):
+    """Score model"""
+
+    score: confloat(ge=0.0, le=1.0)  # type: ignore
+    success: bool = False
+    type: str
+    name: str
+    gen_uuid: str
+    comments: Optional[list[str]] = None
+
+
 class QAPair(Model):
     """Represents a Question-Answer pair in the database."""
 
@@ -310,6 +321,11 @@ class QAPair(Model):
         processed_generation_data = ProcessedGenerationData(
             **gen_dict["processed_generation_data"]
         )
+        evals = (
+            [Score(**json.loads(self.evals[eval])) for eval in self.evals]
+            if self.evals
+            else None
+        )
         return EndToEndGeneration(
             config=gen_dict["config"],
             rag_request=rag_request,
@@ -317,6 +333,7 @@ class QAPair(Model):
             processed_generation_data=processed_generation_data,
             error=gen_dict["error"],
             uuid=gen_dict["uuid"],
+            evals=evals,
         )
 
 
@@ -511,6 +528,7 @@ class EndToEndGeneration(BaseModel):
     rag_request: RAGRequest
     rag_response: Optional[RAGResponse] = None
     processed_generation_data: Optional[ProcessedGenerationData] = None
+    evals: Optional[list[Score]] = None
     error: Optional[str] = None
     uuid: Optional[str] = None
 
@@ -604,6 +622,46 @@ class EndToEndGeneration(BaseModel):
             metadata={},
             generation=json.dumps(self.model_dump(serialize_as_any=True)),
         )
+
+
+class FeedbackRequest(BaseModel):
+    """A feedback request from the frontend."""
+
+    approve: Optional[bool] = None
+    issues: Optional[list[str]] = None
+    comments: Optional[str] = None
+
+
+class Feedback(Model):
+    """Represents user feedback for a QAPair."""
+
+    id = AutoField()
+    qapair = ForeignKeyField(QAPair, backref="feedbacks")
+    approve = BooleanField(null=True)
+    issues = TextField(null=True)
+    comments = TextField(null=True)
+    created_at = DateTimeField(default=datetime.datetime.now)
+    updated_at = DateTimeField(default=datetime.datetime.now)
+
+    def save(self, *args, **kwargs):
+        """Saves the feedback to the database."""
+        self.updated_at = datetime.datetime.now()
+        return super(Feedback, self).save(*args, **kwargs)
+
+    @property
+    def issues_dict(self):
+        """Returns the issues as a dictionary."""
+        return json.loads(str(self.issues)) if self.issues else {}
+
+    @issues_dict.setter
+    def issues_dict(self, value):
+        """Sets the issues for the DB."""
+        self.issues = json.dumps(value)
+
+    class Meta:
+        """Meta options for the Feedback model."""
+
+        database = db
 
 
 class RAGLog(BaseModel):

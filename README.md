@@ -129,6 +129,34 @@ server: uvicorn
     }
 ]```
 
+#### Feedback
+The /feedback endpoint allows users to submit feedback for a specific generation. Here are some example commands using HTTPie:
+
+1. Provide feedback with all fields:
+
+```bash
+http POST http://localhost:8000/feedback/12345-uuid-example \
+approve:=true \
+issues:='["NOT_FACTUALLY_CORRECT", "NOT_RELATED_TO_QUESTION"]' \
+comments="The answer provided was off-topic and contained some factual errors."
+```
+
+2. Provide feedback with only the 'approve' field:
+
+```bash
+http POST http://localhost:8000/feedback/67890-uuid-example \
+approve:=false
+```
+
+3. Provide feedback with only 'issues' and 'comments':
+
+```bash
+http POST http://localhost:8000/feedback/abcde-uuid-example \
+issues:='["WEBSITE_BROKEN", "OTHER"]' \
+comments="The website link provided in the answer was broken, and there were some other minor issues."
+```
+
+Replace the UUIDs (12345-uuid-example, 67890-uuid-example, abcde-uuid-example) with actual generation UUIDs from your system when testing.
 
 ## Prefect flows
 

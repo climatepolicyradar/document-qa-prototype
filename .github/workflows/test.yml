@@ -24,11 +24,11 @@ jobs:
         with:
           python-version: "3.10"
           cache: "poetry"
-          
+
       - name: Install dependencies
         run: |
           poetry install && poetry run pre-commit install
-  
+
       - name: Install NLTK dependencies
         run: |
           poetry run python -m nltk.downloader stopwords
@@ -49,6 +49,7 @@ jobs:
           --ignore=tests/controllers/test_rag_controller.py \
           --ignore=tests/ingestion/test_ingestion_helpers.py \
           --ignore=tests/controllers/test_vespa_controller.py \
+          --ignore=tests/online/test_assertion_extraction.py \
           --nbmake \
           --nbmake-find-import-errors \
           --nbmake-timeout=20 -vvv

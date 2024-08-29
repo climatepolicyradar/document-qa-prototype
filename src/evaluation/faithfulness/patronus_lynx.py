@@ -1,7 +1,7 @@
 import json
 from typing import Optional
-from src.evaluation.evaluator import Evaluator, Score
-from src.models.data_models import EndToEndGeneration
+from src.evaluation.evaluator import Evaluator
+from src.models.data_models import EndToEndGeneration, Score
 from src.prompts.template_building import jinja_template_loader
 from src.controllers.EvaluationController import evaluators
 from src.logger import get_logger

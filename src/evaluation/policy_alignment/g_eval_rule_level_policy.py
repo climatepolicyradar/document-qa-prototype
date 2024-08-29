@@ -4,7 +4,7 @@ from src.evaluation.util import evaluators
 from src.evaluation.evaluator import Evaluator
 from src.logger import get_logger
 from src.evaluation.policy_alignment.g_eval_policy import GEvalPolicy
-from src.evaluation.evaluator import Score
+from src.models.data_models import Score
 
 import src.config as config
 

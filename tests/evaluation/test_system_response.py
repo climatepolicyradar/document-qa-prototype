@@ -1,5 +1,5 @@
 import uuid
-from src.evaluation.evaluator import Score
+from src.models.data_models import Score
 from src.evaluation.system_response.system_response import SystemResponse
 
 import pytest
