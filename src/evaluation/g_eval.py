@@ -52,9 +52,10 @@ class GEval(Evaluator, ABC):
         score = self.response_postprocessor(response)
 
         if score is not None:
+            normalised_score = (score - 1) / 4.0
             return Score(
-                score=(score - 1) / 4.0,  # type: ignore
-                success=self.get_success(score),
+                score=normalised_score,  # type: ignore
+                success=self.get_success(normalised_score),
                 type=self.TYPE,
                 name=self.NAME,
                 gen_uuid=generation.uuid,  # type: ignore
