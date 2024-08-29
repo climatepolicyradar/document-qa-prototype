@@ -3,6 +3,7 @@ from src.logger import get_logger
 
 logger = get_logger(__name__)
 
+
 class FeedbackController:
     """Controller for handling feedback operations."""
 
@@ -19,7 +20,7 @@ class FeedbackController:
             qapair=qapair,
             approve=feedback_data.approve,
             issues=feedback_data.issues,
-            comments=feedback_data.comments
+            comments=feedback_data.comments,
         )
         feedback.save()
 
