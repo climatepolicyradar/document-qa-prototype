@@ -49,6 +49,7 @@ def aggregate_and_print_results(
     title: Optional[str],
     update_evals: bool = False,
     markdown: bool = False,
+    transpose: bool = True
 ) -> tuple[pd.DataFrame, str]:
     """
     Aggregates and prints the results for a given set of attributes based on the evals and qa-pairs dataframes
@@ -65,6 +66,7 @@ def aggregate_and_print_results(
         title: Optional[str]: title for the print block
         update_evals: bool = False: to return the updated (filtered) evals dataframe
         markdown: bool = False: to print the results in markdown format
+        transpose: bool = True: to transpose the resulting tables
 
     Returns:
         pd.DataFrame: The updated evals dataframe if update_evals is True, otherwise the evals dataframe -- this is used for filtering
@@ -86,7 +88,7 @@ def aggregate_and_print_results(
     for attribute, aggregation in attributes_to_breakdown.items():
         out_str += f"\n{attribute} as {aggregation}:"
         printable = breakdown_for_attribute(
-            positive_df, _df, evals, attribute, aggregation, markdown
+            positive_df, _df, evals, attribute, aggregation, markdown, transpose
         )
         out_str += f"{printable}\n"
 
@@ -146,7 +148,8 @@ def breakdown_for_attribute(
     evals: pd.DataFrame,
     attribute: str,
     aggregation: str,
-    markdown: bool = False,
+    markdown: bool,
+    transpose: bool
 ) -> Union[pd.DataFrame, str]:
     """Creates a breakdown of the counts or ratios based on the eval results for a given attribute"""
 
@@ -159,6 +162,9 @@ def breakdown_for_attribute(
     else:
         raise ValueError("Invalid aggregation type")
 
-    printable = pd.DataFrame(printable.sort_values(ascending=False)).T.round(4)
+    printable = pd.DataFrame(printable.sort_values(ascending=False)).round(3)
+
+    if transpose:
+        printable = printable.T
 
     return printable if not markdown else printable.to_markdown()
