@@ -21,6 +21,7 @@ class FeedbackController:
             approve=feedback_data.approve,
             issues=feedback_data.issues,
             comments=feedback_data.comments,
+            email=feedback_data.email,
         )
         feedback.save()
 

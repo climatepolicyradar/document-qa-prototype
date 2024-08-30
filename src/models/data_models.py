@@ -630,6 +630,7 @@ class FeedbackRequest(BaseModel):
     approve: Optional[bool] = None
     issues: Optional[list[str]] = None
     comments: Optional[str] = None
+    email: Optional[str] = None
 
 
 class Feedback(Model):
@@ -640,6 +641,7 @@ class Feedback(Model):
     approve = BooleanField(null=True)
     issues = TextField(null=True)
     comments = TextField(null=True)
+    email = TextField(null=True)
     created_at = DateTimeField(default=datetime.datetime.now)
     updated_at = DateTimeField(default=datetime.datetime.now)
 
