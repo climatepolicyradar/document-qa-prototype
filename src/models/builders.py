@@ -1,5 +1,6 @@
 import re
 from typing import Any, Tuple
+from src.controllers.DocumentController import DocumentController
 from src.models.data_models import (
     AssertionModel,
     Citation,
@@ -30,6 +31,30 @@ class EndToEndGenerationBuilder:
     other_documents: list[Citation] = []
     metadata: dict = {}
     page_number_cache: dict = {}
+
+    @staticmethod
+    def from_e2e_generation(e2e_generation: EndToEndGeneration):
+        """
+        Builds an E2E generation from an existing E2E generation.
+
+        Does not set up the processed generation data or the citations. FOR NOW.
+        """
+        b = EndToEndGenerationBuilder()
+        b.config = e2e_generation.config
+        b.query = e2e_generation.rag_request.query
+        b.scenario = e2e_generation.rag_request.as_scenario(DocumentController())
+        b.retrieved_documents = (
+            e2e_generation.rag_response.retrieved_documents
+            if e2e_generation.rag_response is not None
+            else []
+        )
+        b.answer = e2e_generation.get_answer()
+        b.metadata = (
+            e2e_generation.rag_response.metadata
+            if e2e_generation.rag_response is not None
+            else {}
+        )
+        return b
 
     def __call__(self):
         """

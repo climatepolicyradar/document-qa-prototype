@@ -249,8 +249,15 @@ class RagController:
         LOGGER.info(f"🔍 System summarised the query: {summary}")
         result.add_metadata("no_answer_summary", summary)
         result.add_metadata("no_answer_topics", topics_list)
+        result.add_metadata("original_answer", result.get_answer())
 
-        return result
+        # Update the E2E Model with the new answer so it parses and displays the same as other responses
+        generation = EndToEndGenerationBuilder.from_e2e_generation(result)
+        generation.set_answer(summary)
+        no_answer_generation = generation()
+        no_answer_generation.add_metadata("responded", False)
+
+        return no_answer_generation
 
     def _parse_response_into_queries(
         self, response_text: str, document_id: str, scenario: Scenario, tag: str

@@ -24,8 +24,8 @@ class SummariseDocuments(LLMCommand):
         """Call the command"""
         scenario = Scenario(
             prompt=Prompt.from_template("response/summarise_simple"),
-            model="mistral-nemo",
-            generation_engine=LLMTypes.VERTEX_AI.value,
+            model="gemini-1.5-flash",
+            generation_engine=LLMTypes.GEMINI.value,
         )
 
         if not end_to_end_generation.has_documents():
