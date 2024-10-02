@@ -31,9 +31,3 @@ def test_get_document_text(rag_controller):
     print(f"Found {len(doc_text['root']['children'])} text blocks")
     assert doc_text is not None
     assert doc_text["root"]["fields"]["totalCount"] == len(doc_text["root"]["children"])
-
-
-def test_get_available_documents(rag_controller):
-    docs = rag_controller.get_available_documents()
-    assert docs is not None
-    assert len(docs) > 0

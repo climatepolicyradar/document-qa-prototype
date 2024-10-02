@@ -1,0 +1,1 @@
+Provide two of the main topics in this text related to climate policy. The topics should be specific to the text, and more specific than general terms like 'climate policy'. Each topic should be a maximum of 4 words. Return the topics with a newline character between them. Return the topics only. TEXT: {{context_str}}

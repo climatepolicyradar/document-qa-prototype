@@ -1,27 +1,62 @@
 """Functions for queueing jobs for prefect flows"""
-
-from psycopg2 import connect
-from pq import PQ
-from src.flows.utils import get_secret
+from src.flows.utils import get_labs_session
+from src.logger import get_logger
 import json
 
-creds = json.loads(get_secret("LABS_RDS_DB_CREDS"))
-conn = connect(
-    dbname=creds["dbname"],
-    user=creds["user"],
-    password=creds["password"],
-    host=creds["host"],
-    port=creds["port"],
-)
+logger = get_logger(__name__)
 
-pq = PQ(conn)
-pq.create()
+sqs = get_labs_session().client("sqs")
 
 
 def queue_job(tag: str, payload: dict):
-    queue = pq[tag]
-    queue.put(payload)
+    # Create queue if not exists
+    try:
+        sqs.get_queue_url(QueueName=tag)
+    except sqs.exceptions.QueueDoesNotExist:
+        logger.info(f"🎟️ Creating queue {tag}")
+        sqs.create_queue(QueueName=tag)
+
+    # Use the tag-specific queue URL
+    queue_url = sqs.get_queue_url(QueueName=tag)["QueueUrl"]
+    sqs.send_message(
+        QueueUrl=queue_url,
+        MessageBody=json.dumps(payload),
+    )
 
 
-def get_queue(tag: str):
-    return pq[tag]
+def get_queue_job(tag: str):
+    queue_url = sqs.get_queue_url(QueueName=tag)["QueueUrl"]
+    response = sqs.receive_message(QueueUrl=queue_url, MaxNumberOfMessages=1)
+
+    if "Messages" in response:
+        result = json.loads(response["Messages"][0]["Body"])
+        result["receipt_handle"] = response["Messages"][0]["ReceiptHandle"]
+        return result
+    else:
+        return None
+
+
+def mark_job_done(tag: str, receipt_handle: str):
+    queue_url = sqs.get_queue_url(QueueName=tag)["QueueUrl"]
+    sqs.delete_message(QueueUrl=queue_url, ReceiptHandle=receipt_handle)
+
+
+def get_queue_attributes(tag: str):
+    try:
+        sqs.get_queue_url(QueueName=tag)
+    except sqs.exceptions.QueueDoesNotExist:
+        return {
+            "ApproximateNumberOfMessages": 0,
+            "ApproximateNumberOfMessagesNotVisible": 0,
+        }
+
+    queue_url = sqs.get_queue_url(QueueName=tag)["QueueUrl"]
+
+    response = sqs.get_queue_attributes(
+        QueueUrl=queue_url,
+        AttributeNames=[
+            "ApproximateNumberOfMessages",
+            "ApproximateNumberOfMessagesNotVisible",
+        ],
+    )
+    return response["Attributes"]

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import json
 from src.models.data_models import QAPair, DBQuery
-from src.flows.utils import get_db
+from src.flows.get_db import get_db
 
 db = get_db()
 

@@ -17,6 +17,7 @@ get_secret("VERTEX_AI_PROJECT")
 get_secret("GOOGLE_APPLICATION_CREDENTIALS_BASE64")
 get_secret("GOOGLE_API_KEY")
 
+IS_PRODUCTION = "ENVIRONMENT" in os.environ and os.environ["ENVIRONMENT"] == "prod"
 
 VESPA_URL: Optional[str] = get_secret("VESPA_URL")
 VESPA_CERT: Optional[str] = get_secret("VESPA_CERT_LOCATION")

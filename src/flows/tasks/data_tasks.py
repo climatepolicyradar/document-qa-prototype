@@ -1,22 +1,26 @@
+import random
 from prefect import task, get_run_logger, flow
 
 from peewee import Database, fn
 
 from src.controllers.VespaController import VespaController
-from src.models.data_models import EndToEndGeneration, Query, QAPair, DBQuery
-from src.flows.utils import get_db
+from src.models.data_models import (
+    EndToEndGeneration,
+    Notebook,
+    Query,
+    QAPair,
+    DBQuery,
+    Feedback,
+)
+from src.flows.get_db import get_db
 from prefect.tasks import exponential_backoff
 
 
-def migrate_db(db: Database, drop_tables: bool = False):
+def migrate_db(db: Database):
     logger = get_run_logger()
     db.connect()
     logger.info("Creating tables...")
-
-    if drop_tables:
-        db.drop_tables([DBQuery, QAPair], safe=True)
-
-    db.create_tables([DBQuery, QAPair], safe=True)
+    db.create_tables([DBQuery, QAPair, Notebook, Feedback], safe=True)
     logger.info("Tables created")
 
 
@@ -71,14 +75,19 @@ def get_unanswered_queries(
         .distinct()
     )
 
+    query_id_list = [query_model.query_id for query_model in query_models]
+
     logger.info(f"🎲 {query_models} ")
 
     queries = [
         query.to_query()
         for query in DBQuery.select().where(
-            DBQuery.tag == query_tag, DBQuery.id.not_in(query_models)
+            DBQuery.tag == query_tag, DBQuery.id.not_in(query_id_list)
         )
     ]
+
+    # Randomise query order
+    random.shuffle(queries)
 
     logger.info(
         f"🎲 Got {len(queries)} unanswered queries for tag {tag} with model {model} and prompt {prompt}"
@@ -158,10 +167,10 @@ def get_answer_by_id(db: Database, id: int) -> QAPair:
 
 
 @flow
-def init_db_and_tables(db: Database, drop_tables: bool = False):
+def init_db_and_tables(db: Database):
     logger = get_run_logger()
     logger.info("Migrating database...")
-    migrate_db(db, drop_tables)
+    migrate_db(db)
     logger.info("Database migrated")
 
 
