@@ -1,15 +1,12 @@
 models:
-  - generation_engine: vertexai
-    model: mistral-nemo
+  - generation_engine: gemini
+    model: gemini-1.5-flash
 model_selection: random
 prompt_templates:
-  - prompt_template: response/FAITHFULQA_SCHIMANSKI_CITATION_QA_TEMPLATE_MODIFIED
-  - prompt_template: response/adversarial
+  - prompt_template: api-prompts/basic_answer_refined
 template_selection: all
 retrieval:
-  - retrieval_window: 1
-    top_k: 3
   - retrieval_window: 0
-    top_k: 6
+    top_k: 10
 retrieval_selection: random
 documents_per_query: 1 # set this to 1 if the query file contains document ids

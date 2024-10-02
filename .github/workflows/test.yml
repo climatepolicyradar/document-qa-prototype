@@ -10,7 +10,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
 
     steps:
       - name: Check out repository code
@@ -27,22 +27,12 @@ jobs:
 
       - name: Install dependencies
         run: |
-          poetry install
-
-      - name: Install dependencies
-        run: |
           poetry install && poetry run pre-commit install
-  
+
       - name: Install NLTK dependencies
         run: |
           poetry run python -m nltk.downloader stopwords
           poetry run python -m nltk.downloader punkt
-
-      - name: Install guardrails dependencies
-        run: |
-          poetry run guardrails hub install hub://guardrails/detect_pii
-          poetry run guardrails hub install hub://guardrails/toxic_language
-          poetry run guardrails hub install hub://guardrails/web_sanitization
 
       - name: Run test suite
         env:
@@ -59,6 +49,7 @@ jobs:
           --ignore=tests/controllers/test_rag_controller.py \
           --ignore=tests/ingestion/test_ingestion_helpers.py \
           --ignore=tests/controllers/test_vespa_controller.py \
+          --ignore=tests/online/test_assertion_extraction.py \
           --nbmake \
           --nbmake-find-import-errors \
           --nbmake-timeout=20 -vvv

@@ -31,7 +31,7 @@ class VespaController:
         LOGGER.info(f"🔍 Vespa query: {query} for document_id: {document_id}")
 
         query_body = None
-        yql = f"select text_block_id, text_block, text_block_window from sources document_passage where userQuery() and (document_import_id in ('{document_id}'))"
+        yql = f"select text_block_id, text_block, text_block_window, text_block_coords, text_block_page from sources document_passage where userQuery() and (document_import_id in ('{document_id}'))"
 
         with vespa.syncio() as session:
             response: VespaQueryResponse = session.query(
@@ -99,7 +99,7 @@ class VespaController:
 
     def retriever(self, document_id: str, top_k: int = 6) -> "VespaRetriever":
         """Returns CPR's VespaRetriever for a chain"""
-        yql = f"select text_block_id, text_block, text_block_window from sources document_passage where userQuery() and (document_import_id in ('{document_id}'))"
+        yql = f"select text_block_id, text_block, text_block_window, text_block_coords, text_block_page from sources document_passage where userQuery() and (document_import_id in ('{document_id}'))"
         # yql = f"select text_block_id, text_block, text_block_window from sources document_passage where userQuery() and (document_import_id in ('{document_id}'))"
 
         vespa_query_body = {"yql": yql, "hits": top_k}
@@ -109,7 +109,12 @@ class VespaController:
             controller=self,
             body=vespa_query_body,
             content_field="text_block",
-            metadata_fields=["text_block_id", "text_block_window"],
+            metadata_fields=[
+                "text_block_id",
+                "text_block_window",
+                "text_block_coords",
+                "text_block_page",
+            ],
             app=None,
         )
 
@@ -156,6 +161,8 @@ class CPRVespaRetriever(VespaRetriever):
                     }
                 metadata["id"] = child["id"]
                 docs.append(Document(page_content=page_content, metadata=metadata))
+
+        LOGGER.info(f"Retrieved from vespa {len(docs)} docs")
         return docs
 
     def _get_relevant_documents(

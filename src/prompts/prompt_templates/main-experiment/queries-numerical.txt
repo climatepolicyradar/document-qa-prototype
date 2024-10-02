@@ -1,0 +1,28 @@
+# Task
+Generate a single query that requires numerical analysis or calculations based on information provided in the document.
+
+Assume that the human hasn't read the document yet, but is familiar with the main topic of the document.
+
+You are provided some examples of real queries below. The generated query should be similar to these in style but should specifically require numerical analysis or calculations.
+
+# Examples
+The example queries are not examples for this specific task, but are examples of real queries that we've seen in practice. You should generate queries that are similar but MAKE SURE THEY MATCH THE TASK GIVEN ABOVE. 
+
+Examples of real queries:
+{% for row in seed_queries %}
+- {{ row.text }}
+{% endfor %}
+
+# Rules and instructions
+
+Some of the above queries are keywords. Aim to generate similar or exactly the same keywords as in the list, if relevant for the document's topic.
+
+Format your response as a JSON following the below schema:
+{"queries": list[str]}
+
+The list will contain exactly 1 query.
+
+Do not add anything to this schema. The list should contain exactly 1 queries. 
+
+The document:
+{{document}}

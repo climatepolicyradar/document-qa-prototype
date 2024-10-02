@@ -1,9 +1,9 @@
-from src.controllers.RagController import RagController
 from src.evaluation.g_eval import GEval
 from src.models.data_models import EndToEndGeneration
 from src.prompts.template_building import jinja_template_loader
 from src.controllers.EvaluationController import evaluators
 from src.logger import get_logger
+from src.online.inference import get_llm
 
 
 import src.config as config
@@ -22,7 +22,7 @@ class GEvalFaithfulness(GEval):
     def __init__(self, *args):
         super().__init__(*args)
 
-        self.model = RagController().get_llm("gemini", "gemini-1.5-pro")
+        self.model = get_llm("gemini", "gemini-1.5-pro")
         self.template = jinja_template_loader(
             config.evaluation_templates_folder / "g_eval_faithfulness.txt"
         )
@@ -39,4 +39,4 @@ class GEvalFaithfulness(GEval):
 
     def get_success(self, score: float) -> bool:
         """Returns whether the score is a success for this evaluator"""
-        return score >= 0.8
+        return score >= 0.75

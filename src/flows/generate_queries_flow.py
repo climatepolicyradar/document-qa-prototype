@@ -1,80 +1,28 @@
 import os
-import time
 from prefect import flow, get_run_logger, task
 import psutil
 from src.controllers.RagController import RagController
 from src.controllers.ScenarioController import ScenarioController
+from src.flows.get_db import get_db
 from src.flows.tasks.data_tasks import create_queries, show_db_stats
 from cpr_data_access.models import BaseDocument
 from prefect.utilities.annotations import quote
 from prefect.tasks import exponential_backoff
 import argparse
-import boto3
 
 from peewee import Database
-from src.flows.utils import get_db, get_labs_session
+from src.flows.utils import get_labs_session
+from src.flows.tasks.s3_tasks import get_doc_ids_from_s3, get_file_from_s3
 
 # TODO PR this into CPR SDK to allow session to be passed in
 
 
-def get_json_filenames(
-    bucket_name: str,
-    directory_path: str = "",
-    session: boto3.Session = get_labs_session(),
-) -> list[str]:
-    s3 = session.client("s3")
-    paginator = s3.get_paginator("list_objects_v2")
-
-    json_filenames = []
-
-    # Ensure the directory path ends with a '/' if it's not empty
-    if directory_path and not directory_path.endswith("/"):
-        directory_path += "/"
-
-    try:
-        # Paginate through the objects in the bucket
-        for page in paginator.paginate(Bucket=bucket_name, Prefix=directory_path):
-            if "Contents" in page:
-                for obj in page["Contents"]:
-                    # Check if the file has a .json extension
-                    if obj["Key"].lower().endswith(".json"):
-                        json_filenames.append(obj["Key"])
-
-        return json_filenames
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        return []
-
-
-@task
-def get_doc_ids_from_s3(
-    bucket_name: str = "project-rag", prefix: str = "data/cpr_embeddings_output"
-) -> list[str]:
-    logger = get_run_logger()
-    logger.info(f"🚀 Getting doc ids from s3 with prefix: {prefix}")
-    logger.info(
-        f"Memory before task: {psutil.Process(os.getpid()).memory_info()[0] / float(1024 * 1024)}MiB"
-    )
-
-    prefixes = get_json_filenames(bucket_name, prefix, get_labs_session())
-    logger.info(f"🚀 Got {len(prefixes)} prefixes")
-
-    doc_ids = [file.split("/")[-1].rstrip(".json") for file in prefixes]
-
-    logger.info(f"🚀 Got {len(doc_ids)} doc ids")
-    return doc_ids
-
-
 @task(log_prints=True)
-def spawn_query_tasks(doc_ids: list[str], tag: str, config: str, limit: int = 5):
-    logger = get_run_logger()
+def spawn_query_tasks(doc_ids: list[str], tag: str, config: str):
     for doc_id in doc_ids:
-        generate_queries_for_document.submit(doc_id, tag, config, get_db(), limit=limit)
-        logger.info(f"🕐 Sleeping for 5 seconds before processing doc_id: {doc_id}")
-        time.sleep(5)
+        generate_queries_for_document.submit(doc_id, tag, config, get_db())
 
 
-#
 @task(
     task_run_name="generate_queries_{doc_id}_{tag}",
     retries=5,
@@ -89,7 +37,6 @@ def generate_queries_for_document(
     config: str,
     db: Database,
     s3_prefix: str = "project-rag/data/cpr_embeddings_output",
-    limit: int = 5,
 ):
     logger = get_run_logger()
     get_labs_session(set_as_default=True)
@@ -101,7 +48,14 @@ def generate_queries_for_document(
     seed_queries = sc.load_seed_queries()
 
     logger.info(f"Loading document from s3: {s3_prefix}/{doc_id}")
-    doc = BaseDocument.load_from_remote(s3_prefix, doc_id)
+    s3_bucket = s3_prefix.split("/")[0]
+    s3_prefix_path = "/".join(s3_prefix.split("/")[1:])
+
+    doc_json = get_file_from_s3(s3_bucket, f"{s3_prefix_path}/{doc_id}.json")
+    with open(f"./data/doc_cache/{doc_id}.json", "w") as f:
+        f.write(doc_json)
+
+    doc = BaseDocument.load_from_local("./data/doc_cache/", doc_id)
 
     logger.info("Initializing RAG controller")
     rc = RagController()
@@ -115,22 +69,25 @@ def generate_queries_for_document(
                 document=doc, scenario=scenario, seed_queries=seed_queries, tag=tag
             )
 
+            logger.info(
+                f"Created {len(queries)} queries for {scenario.prompt.prompt_template}"
+            )
         except Exception as e:
             logger.error(f"Error generating queries for {doc.document_id}: {e}")
             raise e
 
         logger.info(f"Created {len(queries)} queries")
-        create_queries(quote(queries[:limit]), quote(db))  # type: ignore
+        create_queries(quote(queries), quote(db))  # type: ignore
 
     show_db_stats(db)
 
 
 @flow(log_prints=True)
 def query_control_flow(
-    config: str = "src/configs/eval_prefect_1_queries_config.yaml",
+    config: str = "src/configs/experiment_MAIN_QUERIES_1.0.yaml",
     limit: int = 100,
     offset: int = 0,
-    tag: str = "test",
+    tag: str = "main_run_21_08_2024_queries",
 ):
     logger = get_run_logger()
     logger.info(
@@ -142,10 +99,7 @@ def query_control_flow(
 
     doc_ids = get_doc_ids_from_s3()
 
-    # This is generating 1 query only at the moment
-    spawn_query_tasks(
-        doc_ids[offset : min(offset + limit, len(doc_ids))], tag, config, 1
-    )
+    spawn_query_tasks(doc_ids[offset : min(offset + limit, len(doc_ids))], tag, config)
 
 
 if __name__ == "__main__":
@@ -154,7 +108,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--config",
         type=str,
-        default="src/configs/eval_prefect_1_queries_config.yaml",
+        default="src/configs/experiment_MAIN_QUERIES_1.0.yaml",
         help="Path to the configuration file",
     )
     parser.add_argument(

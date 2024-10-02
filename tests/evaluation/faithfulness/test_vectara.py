@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, Mock
-from src.evaluation.evaluator import Score
+from src.models.data_models import Score
 from src.evaluation.faithfulness.vectara import Vectara
 from src.models.data_models import EndToEndGeneration, RAGRequest, RAGResponse
 import uuid
