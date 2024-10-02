@@ -107,7 +107,7 @@ VERTEX_MODEL_ENDPOINTS = {
         "location": "europe-west2",
         "params": {"max_tokens": 2048},
     },
-    "climate-gpt-7b": {
+    "climate-gpt-7b": {  # This isn't working until we get llama2chat wrapper working.
         "type": "model_garden",
         "endpoint_id": "3318207345372168192",
         "location": "europe-west2",

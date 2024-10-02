@@ -1,6 +1,8 @@
 from typing import Optional
 from abc import ABC, abstractmethod
 
+import re
+
 from src.evaluation.evaluator import Evaluator
 from src.models.data_models import EndToEndGeneration
 from src.models.data_models import Score
@@ -39,17 +41,20 @@ class GEval(Evaluator, ABC):
 
         if prompt is None:
             prompt = self.get_prompt(generation)
+
         response = self.model.invoke(prompt)
 
-        if isinstance(response, str):
+        if hasattr(response, "content"):
+            result = response.content.strip()
+        elif isinstance(response, str):
             result = response.strip()
         else:
-            result = response.content.strip()
+            raise ValueError(f"Invalid response type: {type(response)}")
 
         if not result.isdigit():  # type: ignore
-            raise ValueError(f"G-Eval score is not a digit: {response}")  # type: ignore
+            raise ValueError(f"G-Eval score is not a digit: {result}")  # type: ignore
 
-        score = self.response_postprocessor(response)
+        score = self.response_postprocessor(result)
 
         if score is not None:
             normalised_score = (score - 1) / 4.0
@@ -71,9 +76,20 @@ class GEval(Evaluator, ABC):
         """Returns the success of the evaluator"""
         pass
 
-    def response_postprocessor(self, response) -> Optional[int]:
+    def response_postprocessor(self, response: str) -> Optional[int]:
         """Post-processes the response"""
-        if isinstance(response, str):
+        try:
             return int(response)
-        else:
-            return int(response.content)
+        except ValueError:
+            try:
+                LOGGER.warning(
+                    f"Error processing response: {response}, trying to extract the score"
+                )
+                _digit_pattern = re.compile(r"(\d+)")
+                match = _digit_pattern.search(response)
+                if match is None:
+                    return None
+                return int(match.group(1))
+            except Exception:
+                LOGGER.error("Failed to extract the score from response")
+                return None
