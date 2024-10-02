@@ -44,6 +44,7 @@ transformers = "^4.44.0"
 pq = "^1.9.1"
 art = "^6.2"
 matplotlib-venn = "^1.1.1"
+scikit-learn = "^1.5.2"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.0.247"
