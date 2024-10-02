@@ -49,7 +49,8 @@ def aggregate_and_print_results(
     title: Optional[str],
     update_evals: bool = False,
     markdown: bool = False,
-) -> pd.DataFrame:
+    transpose: bool = True,
+) -> tuple[pd.DataFrame, str]:
     """
     Aggregates and prints the results for a given set of attributes based on the evals and qa-pairs dataframes
 
@@ -65,34 +66,80 @@ def aggregate_and_print_results(
         title: Optional[str]: title for the print block
         update_evals: bool = False: to return the updated (filtered) evals dataframe
         markdown: bool = False: to print the results in markdown format
+        transpose: bool = True: to transpose the resulting tables
 
     Returns:
         pd.DataFrame: The updated evals dataframe if update_evals is True, otherwise the evals dataframe -- this is used for filtering
             purposes given the sequential nature of the analysis
+        str: the printable version of the results
     """
     if title:
-        print(f"{title}\n\n")
+        out_str = f"##{title}\n\n"
+    else:
+        out_str = ""
 
     positives = evals[filter_func(evals)]
     positive_df = df[df["id"].isin(positives.index)]
 
     _df = df[df["id"].isin(evals.index)]
 
-    print(
-        f"Total number of positives: {len(positive_df)} out of {len(_df)}, ({len(positive_df) / len(_df) * 100:.2f}%)"
-    )
+    out_str += f"**Total number of positives: {len(positive_df)} out of {len(_df)}, ({len(positive_df) / len(_df) * 100:.2f}%)**"
 
     for attribute, aggregation in attributes_to_breakdown.items():
-        print(f"\n{attribute} as {aggregation}:")
+        out_str += f"\n{attribute} as {aggregation}:"
         printable = breakdown_for_attribute(
-            positive_df, _df, evals, attribute, aggregation, markdown
+            positive_df, _df, evals, attribute, aggregation, markdown, transpose
         )
-        print(f"{printable}\n")
+        out_str += f"{printable}\n"
 
     if update_evals:
-        return evals[~evals.index.isin(positives.index)]
+        return evals[~evals.index.isin(positives.index)], out_str
     else:
-        return evals
+        return evals, out_str
+
+
+def filter_sequence(
+    df: pd.DataFrame,
+    evals: pd.DataFrame,
+    filter_funcs: list[tuple[str, str, Callable]],
+    aggregation_column: str,
+    normalised: bool = False,
+) -> pd.DataFrame:
+    """
+    Aggregates and prints the results for a given set of attributes based on the evals and qa-pairs dataframes
+
+    It applies a filter function by which it chooses the 'positives' from the evals dataset. These are usually the violations
+    on some axis of evaluation.
+
+    Args:
+        df: pd.DataFrame: qa-pairs dataframe
+        evals: pd.DataFrame: evals dataframe
+        filter_funcs: list[tuple[str, str, Callable]]: a list of filters in the form of (name, dataframe-to-apply-on, filter) that will be applied in order. They should return True for violation.
+        aggregation_column: str: the column to aggregate the results on
+        normalised: bool: whether to normalise the counts
+
+    Returns:
+        pd.DataFrame: The updated evals dataframe if update_evals is True, otherwise the evals dataframe -- this is used for filtering
+            purposes given the sequential nature of the analysis
+    """
+    out_df = pd.DataFrame(columns=df[aggregation_column].unique())
+
+    _df = df.copy()
+    for name, applied_on, filter_func in filter_funcs:
+        if applied_on == "evals":
+            positives = evals[filter_func(evals)]
+            positive_df = _df[_df["id"].isin(positives.index)]
+        else:
+            positive_df = _df[filter_func(_df)]
+        _df = _df[~_df["id"].isin(positive_df["id"])]
+        out_df.loc[name] = positive_df[aggregation_column].value_counts()
+
+    out_df.loc["remaining"] = _df[aggregation_column].value_counts()
+
+    if normalised:
+        out_df = out_df.div(out_df.sum(axis=0), axis=1)
+
+    return out_df
 
 
 def breakdown_for_attribute(
@@ -101,7 +148,8 @@ def breakdown_for_attribute(
     evals: pd.DataFrame,
     attribute: str,
     aggregation: str,
-    markdown: bool = False,
+    markdown: bool,
+    transpose: bool,
 ) -> Union[pd.DataFrame, str]:
     """Creates a breakdown of the counts or ratios based on the eval results for a given attribute"""
 
@@ -114,6 +162,9 @@ def breakdown_for_attribute(
     else:
         raise ValueError("Invalid aggregation type")
 
-    printable = pd.DataFrame(printable.sort_values(ascending=False)).T
+    printable = pd.DataFrame(printable.sort_values(ascending=False)).round(3)
+
+    if transpose:
+        printable = printable.T
 
     return printable if not markdown else printable.to_markdown()
