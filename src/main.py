@@ -1,8 +1,7 @@
+from fastapi import FastAPI, HTTPException
 from datetime import datetime
-import json
-from anyio import Path
+import random
 from pydantic import BaseModel
-from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from langchain.globals import set_verbose, set_debug
@@ -12,12 +11,15 @@ from src.controllers.DocumentController import DocumentController
 from src.controllers.EvaluationController import EvaluationController
 from src.controllers.RagController import RagController
 from src.controllers.ScenarioController import ScenarioController
+from src.controllers.FeedbackController import FeedbackController
+from src.models.data_models import Score
 from src.logger import get_logger
-from src.models.data_models import EndToEndGeneration, RAGRequest
+from src.models.data_models import FeedbackRequest, RAGRequest, EndToEndGeneration
 from src.online.inference import LLMTypes
 from src import config
 from src.models.data_models import QAPair
 from src.services.HighlightService import HighlightService
+from src.controllers.LibraryManager import LibraryManager
 
 config.logger.info("Here we go yo")  # I just want ruff to stop removing my import.
 
@@ -119,10 +121,14 @@ def do_rag(request: RAGRequest) -> dict:
     if result.rag_response.metadata.get("guardrails_failed"):
         return result.model_dump()
 
-    if result.rag_response.refused_answer():
+    # Only try to summarise retrieved passages ('no answer flow') if there are
+    # passages to summarise and the answer was refused
+    if (
+        result.rag_response.refused_answer()
+        and len(result.rag_response.retrieved_documents) > 0
+    ):
         result = app_context["rag_controller"].execute_no_answer_flow(result)
 
-    result.rag_response.augment_passages_with_metadata(request.document_id)
     try:
         # Save the answer to the database
         db_save = QAPair.from_end_to_end_generation(result, "prototype")
@@ -182,10 +188,20 @@ def get_document_data(document_id: str) -> dict:
 @app.get("/documents")
 def get_documents():
     """Returns documents and their metadata available for the tool"""
-    metadata_path = Path("data/document_metadata.json")
-    with open(metadata_path, "r") as f:
-        metadata = json.load(f)
-    return metadata
+    return LibraryManager().get_documents()
+
+
+@app.get("/random")
+def get_random_document():
+    all_docs = LibraryManager().get_documents()
+    if "rows" in all_docs:
+        all_docs = all_docs["rows"]  # type: ignore
+
+    if len(all_docs) == 0:
+        raise HTTPException(status_code=404, detail="No documents found")
+
+    random_doc = random.choice(all_docs)
+    return random_doc
 
 
 @app.post("/highlights/{source_id}")
@@ -225,3 +241,37 @@ def evaluate_single(eval_id: str, source_id: str):
 
     evals = mini_ec.evaluate(gen_model, eval_id)
     return evals
+
+
+@app.post("/save-evaluations/{source_id}")
+def store_evals(source_id: str, evals: list[Score]):
+    """
+    Store the evaluations for a document.
+
+    Used because we eager load evals individually on the frontend; when it detects all have loaded it punts to this endpoint to save the bundle.
+    """
+    qa_pair = QAPair.get_by_source_id(source_id)
+    if qa_pair is None:
+        raise HTTPException(status_code=404, detail="Answer not found")
+
+    for score in evals:
+        qa_pair.evals[f"{score.name}-{score.type}"] = score.model_dump_json()
+
+    LOGGER.info(f"📋 Evaluations: {qa_pair.evals}")
+    qa_pair.save()
+
+    return evals
+
+
+@app.post("/feedback/{generation_uuid}")
+async def add_feedback(generation_uuid: str, feedback: FeedbackRequest):
+    """Add feedback for a specific generation."""
+    qa_pair = QAPair.get_by_source_id(generation_uuid)
+    if qa_pair is None:
+        raise HTTPException(status_code=404, detail="Answer not found")
+
+    feedback_instance = FeedbackController.add_feedback(qa_pair, feedback)
+    return {
+        "message": "Feedback added successfully",
+        "feedback_id": feedback_instance.id,
+    }

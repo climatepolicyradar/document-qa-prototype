@@ -1,5 +1,6 @@
 import re
 from typing import Any, Tuple
+from src.controllers.DocumentController import DocumentController
 from src.models.data_models import (
     AssertionModel,
     Citation,
@@ -29,6 +30,31 @@ class EndToEndGenerationBuilder:
     cited_documents: list[Citation] = []
     other_documents: list[Citation] = []
     metadata: dict = {}
+    page_number_cache: dict = {}
+
+    @staticmethod
+    def from_e2e_generation(e2e_generation: EndToEndGeneration):
+        """
+        Builds an E2E generation from an existing E2E generation.
+
+        Does not set up the processed generation data or the citations. FOR NOW.
+        """
+        b = EndToEndGenerationBuilder()
+        b.config = e2e_generation.config
+        b.query = e2e_generation.rag_request.query
+        b.scenario = e2e_generation.rag_request.as_scenario(DocumentController())
+        b.retrieved_documents = (
+            e2e_generation.rag_response.retrieved_documents
+            if e2e_generation.rag_response is not None
+            else []
+        )
+        b.answer = e2e_generation.get_answer()
+        b.metadata = (
+            e2e_generation.rag_response.metadata
+            if e2e_generation.rag_response is not None
+            else {}
+        )
+        return b
 
     def __call__(self):
         """
@@ -70,6 +96,9 @@ class EndToEndGenerationBuilder:
 
     def get_answer(self) -> str:
         """Returns the answer."""
+        if not self.has_documents():
+            return self.no_response_default_answer
+
         return self.answer
 
     def set_answer(self, answer: str):
@@ -79,7 +108,6 @@ class EndToEndGenerationBuilder:
         self.inner_monologue, self.answer = self._strip_inner_ai_monologue(
             self.raw_answer
         )
-
         self._setup_citations(self.answer)
 
         self.add_metadata("responded", not refused_answer(self.answer))
@@ -98,7 +126,7 @@ class EndToEndGenerationBuilder:
                     for idx in assertion[1]
                 ],
             )
-            for assertion in self._get_cited_document_indices_in_answer(answer)
+            for assertion in self._get_cited_document_indices_in_answer(self.answer)
         ]
 
         return self
@@ -113,6 +141,39 @@ class EndToEndGenerationBuilder:
             self.add_metadata_list_item("errors", "Could not strip inner monologue")
             return ("", text)
 
+    def _get_citation_label(self, doc: dict) -> str:
+        """
+        Returns a string label for the citation.
+
+        Currently, the format is 'Pg. 1a' or 'ref. (a)', the latter when the page number is not present. Multiple references on one page will be Pg. 1b, Pg. 1c etc.
+        """
+        page_number = (
+            doc["metadata"]["text_block_page"]
+            if "text_block_page" in doc["metadata"]
+            and doc["metadata"]["text_block_page"] is not None
+            else None
+        )
+
+        if page_number is not None:
+            if page_number not in self.page_number_cache:
+                self.page_number_cache[page_number] = 1
+            else:
+                self.page_number_cache[page_number] += 1
+
+            # Convert number of times we've seen this page number to alphabetical labels
+            alpha_label = chr(
+                96 + self.page_number_cache[page_number]
+            )  # 'a' is 97 in ASCII
+
+            return f"Pg. {page_number}{alpha_label}"
+
+        if "NA" not in self.page_number_cache:
+            self.page_number_cache["NA"] = 1
+        else:
+            self.page_number_cache["NA"] += 1
+        alpha_label = chr(96 + self.page_number_cache["NA"])  # 'a' is 97 in ASCII
+        return f"ref. ({alpha_label})"
+
     def _setup_citations(self, answer: str):
         """Sets up the citations."""
         # Extract the assertion sentences and the indices of the citations for them
@@ -126,16 +187,24 @@ class EndToEndGenerationBuilder:
                     for index in assertion_and_index[1]
                 ]
             )
-            logger.info(f"UNIQUE INDICES: {unique_indices}")
             # Set up other documents list and mark which ones are cited
+            self.cited_documents = []
+            self.other_documents = []
+            self.page_number_cache = {}
+
             for i, doc in enumerate(self.retrieved_documents):
-                doc["citation_idx"] = i
-                cited = True if (i + 1) in unique_indices else False
+                # INDEXES ARE A NIGHTMARE. CHANGE AT YOUR PERIL.
+                actual_idx = i
+
+                doc["citation_idx"] = actual_idx
+                cited = True if actual_idx in unique_indices else False
                 doc["cited"] = cited
+                doc["citation_label"] = self._get_citation_label(doc)
+
                 if cited:
                     self.cited_documents.append(
                         Citation(
-                            citation_idx=(i + 1),
+                            citation_idx=actual_idx,
                             cited=True,
                             text=doc["page_content"],
                         )
@@ -144,7 +213,7 @@ class EndToEndGenerationBuilder:
                 if not cited:
                     self.other_documents.append(
                         Citation(
-                            citation_idx=(i + 1),
+                            citation_idx=actual_idx,
                             cited=False,
                             text=doc["page_content"],
                         )
@@ -155,12 +224,26 @@ class EndToEndGenerationBuilder:
         self.retrieved_documents = [d.dict() for d in retrieved_documents]
         return self
 
+    @property
+    def no_response_default_answer(self) -> str:
+        """
+        Default answer when no documents are retrieved.
+
+        This should trigger the answer refused logic in src.data_models.refused_answer
+        and in auto-eval.
+        """
+        return "I cannot provide an answer based on the document."
+
     def hydrate_from_rag_chain_response(self, rag_chain_response: dict):
         """Pulls in data from the rag chain response"""
         self.query = rag_chain_response["query_str"]
 
         self.set_retrieved_documents(rag_chain_response["documents"])
-        self.set_answer(rag_chain_response["answer"])
+
+        if len(rag_chain_response["documents"]) == 0:
+            self.set_answer(self.no_response_default_answer)
+        else:
+            self.set_answer(rag_chain_response["answer"])
 
         return self
 
@@ -205,6 +288,7 @@ class EndToEndGenerationBuilder:
         try:
             """Get the indices of the cited documents in the answer."""
             pattern = r"(.*?)\s*\[([\d,\s]+)\]"  # Looking for [x], [x,y], [x,y,z] etc
+            # pattern = r"\[(\d+(?:\s*,\s*\d+)*)\]"
             matches = re.findall(pattern, rag_answer)
 
             for sentence, citations in matches:
@@ -221,5 +305,4 @@ class EndToEndGenerationBuilder:
             self.add_metadata_list_item("errors", "Could not extract assertions")
             results = []
 
-        logger.info(f"CITED DOCUMENT INDICES: {results}")
         return results

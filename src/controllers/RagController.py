@@ -41,7 +41,7 @@ class RagController:
         self.observability = ObservabilityManager()
         self.guardrails = GuardrailController()
         self.observe = False
-        # TODO self.observe = observe
+        self.observe = observe
 
     def get_llm(
         self, type: str, model: str, unfiltered: bool = False
@@ -199,17 +199,27 @@ class RagController:
             scenario=scenario,
         )
 
-        response = rag_chain_with_source.invoke(
-            {
-                "query_str": query,
-                "document_id": scenario.document.document_id,
-                "document_metadata_context_str": f"'{scenario.document.document_name}' pub. {scenario.document.document_metadata.publication_ts} (country:{scenario.document.document_metadata.geography})",
-            },
-        )
+        if self.observe:
+            response = rag_chain_with_source.invoke(
+                {
+                    "query_str": query,
+                    "document_id": scenario.document.document_id,
+                    "document_metadata_context_str": f"'{scenario.document.document_name}' pub. {scenario.document.document_metadata.publication_ts} (country:{scenario.document.document_metadata.geography})",
+                },
+                config={"callbacks": [self.observability.get_tracing_callback()]},
+            )
+        else:
+            response = rag_chain_with_source.invoke(
+                {
+                    "query_str": query,
+                    "document_id": scenario.document.document_id,
+                    "document_metadata_context_str": f"'{scenario.document.document_name}' pub. {scenario.document.document_metadata.publication_ts} (country:{scenario.document.document_metadata.geography})",
+                },
+            )
 
         generation.hydrate_from_rag_chain_response(response)
 
-        LOGGER.info(f"🔍 Running guardrrails on response: {generation.get_answer()}")
+        LOGGER.info(f"🔍 Running guardrails on response: {generation.get_answer()}")
         guardrail_result = self.guardrails.validate(generation.get_answer())
         LOGGER.info(f"🔍 Guardrail result: {guardrail_result}")
 
@@ -239,8 +249,15 @@ class RagController:
         LOGGER.info(f"🔍 System summarised the query: {summary}")
         result.add_metadata("no_answer_summary", summary)
         result.add_metadata("no_answer_topics", topics_list)
+        result.add_metadata("original_answer", result.get_answer())
 
-        return result
+        # Update the E2E Model with the new answer so it parses and displays the same as other responses
+        generation = EndToEndGenerationBuilder.from_e2e_generation(result)
+        generation.set_answer(summary)
+        no_answer_generation = generation()
+        no_answer_generation.add_metadata("responded", False)
+
+        return no_answer_generation
 
     def _parse_response_into_queries(
         self, response_text: str, document_id: str, scenario: Scenario, tag: str

@@ -4,7 +4,7 @@ import argparse
 import json
 
 from peewee import Database
-from src.flows.utils import get_db
+from src.flows.get_db import get_db
 from src.models.data_models import Query
 
 

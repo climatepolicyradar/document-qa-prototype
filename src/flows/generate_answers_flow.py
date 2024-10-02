@@ -6,7 +6,7 @@ from src.controllers.RagController import RagController
 from src.controllers.ScenarioController import ScenarioController
 from src.flows.tasks.qa_tasks import generate_answer_task
 from peewee import Database
-from src.flows.utils import get_db
+from src.flows.get_db import get_db
 from src.models.data_models import Prompt, Query, Scenario
 from src.flows.tasks.data_tasks import (
     get_queries,

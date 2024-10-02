@@ -24,8 +24,8 @@ class SummariseDocuments(LLMCommand):
         """Call the command"""
         scenario = Scenario(
             prompt=Prompt.from_template("response/summarise_simple"),
-            model="mistral-nemo",
-            generation_engine=LLMTypes.VERTEX_AI.value,
+            model="gemini-1.5-flash",
+            generation_engine=LLMTypes.GEMINI.value,
         )
 
         if not end_to_end_generation.has_documents():
@@ -42,15 +42,18 @@ class SummariseDocuments(LLMCommand):
 class GetTopicsFromText(LLMCommand):
     """Gets the topics from the text retrieved by the RAG controller."""
 
-    def __call__(self, end_to_end_generation: EndToEndGeneration, **kwargs):
-        """Call the command"""
-        scenario = Scenario(
+    def get_scenario(self) -> Scenario:
+        """Get the scenario for the command."""
+        return Scenario(
             prompt=Prompt.from_template(
                 "response/generate_topics_from_retrieved_documents"
             ),
             model="mistral-nemo",
             generation_engine=LLMTypes.VERTEX_AI.value,
         )
+
+    def __call__(self, end_to_end_generation: EndToEndGeneration, **kwargs):
+        """Call the command"""
 
         if not end_to_end_generation.has_documents():
             return []
@@ -59,9 +62,12 @@ class GetTopicsFromText(LLMCommand):
             [doc["page_content"] for doc in end_to_end_generation.get_documents()]
         )
 
-        topics = self.rag_controller.run_llm(
-            scenario, {"context_str": retrieved_passages_joined}
-        )
+        return self.process_text(retrieved_passages_joined)
+
+    def process_text(self, text: str) -> list[str]:
+        """Process the text to remove unwanted characters."""
+
+        topics = self.rag_controller.run_llm(self.get_scenario(), {"context_str": text})
 
         try:
             topics_list = self._process_extracted_topics(topics)

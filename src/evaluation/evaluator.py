@@ -1,19 +1,7 @@
 from src.models.data_models import EndToEndGeneration
-from pydantic import BaseModel, confloat
-from typing import Optional
 from abc import ABC, abstractmethod
 from src.logger import get_logger
-
-
-class Score(BaseModel):
-    """Score model"""
-
-    score: confloat(ge=0.0, le=1.0)  # type: ignore
-    success: bool = False
-    type: str
-    name: str
-    gen_uuid: str
-    comments: Optional[list[str]] = None
+from src.models.data_models import Score
 
 
 class Evaluator(ABC):

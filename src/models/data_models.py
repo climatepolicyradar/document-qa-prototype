@@ -1,7 +1,7 @@
 from enum import Enum
 import json
 import jinja2
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, confloat, model_validator
 from typing import Any, Optional, Tuple
 import datetime
 from wandb.sdk.data_types.trace_tree import Trace
@@ -19,9 +19,8 @@ from peewee import (
     BooleanField,
 )
 from playhouse.postgres_ext import BinaryJSONField
-from src.controllers.LibraryManager import LibraryManager
 from src.controllers.DocumentController import DocumentController
-from src.flows.utils import get_db
+from src.flows.get_db import get_db
 
 import uuid
 import hashlib
@@ -251,6 +250,17 @@ class Notebook(Model):
         database = db
 
 
+class Score(BaseModel):
+    """Score model"""
+
+    score: confloat(ge=0.0, le=1.0)  # type: ignore
+    success: bool = False
+    type: str
+    name: str
+    gen_uuid: str
+    comments: Optional[list[str]] = None
+
+
 class QAPair(Model):
     """Represents a Question-Answer pair in the database."""
 
@@ -311,6 +321,11 @@ class QAPair(Model):
         processed_generation_data = ProcessedGenerationData(
             **gen_dict["processed_generation_data"]
         )
+        evals = (
+            [Score(**json.loads(self.evals[eval])) for eval in self.evals]
+            if self.evals
+            else None
+        )
         return EndToEndGeneration(
             config=gen_dict["config"],
             rag_request=rag_request,
@@ -318,6 +333,7 @@ class QAPair(Model):
             processed_generation_data=processed_generation_data,
             error=gen_dict["error"],
             uuid=gen_dict["uuid"],
+            evals=evals,
         )
 
 
@@ -342,7 +358,9 @@ class RAGRequest(BaseModel):
         """Returns the RAGRequest as a Scenario object."""
         return Scenario(
             model=self.model if self.model else "",
-            generation_engine=str(self.generation_engine.value),
+            generation_engine=str(self.generation_engine.value)
+            if isinstance(self.generation_engine, LLMTypes)
+            else self.generation_engine,
             prompt=Prompt.from_template(prompt_template=self.prompt_template),
             document=dc.create_base_document(document_id=self.document_id),
             retrieval_window=self.retrieval_window,
@@ -433,20 +451,6 @@ class RAGResponse(BaseModel):
             for idx, window_text in enumerate(window_texts)
         )
 
-    def augment_passages_with_metadata(self, document_id: str):
-        """Adds in page numbers (and TODO other metadata as context string) to the retrieved passages"""
-        lm = LibraryManager()
-        ids = [item["metadata"]["text_block_id"] for item in self.retrieved_documents]
-        data = lm.get_metadata_for_citation(document_id, ids)
-
-        for item in self.retrieved_documents:
-            api_item = [
-                i
-                for i in data
-                if i["text_block_id"] == item["metadata"]["text_block_id"]
-            ][0]
-            item["metadata"]["page_number"] = api_item["page_number"]
-
 
 class Citation(BaseModel):
     """Represents a single evidence retrieved passage and its citation index in the LLM response"""
@@ -526,6 +530,7 @@ class EndToEndGeneration(BaseModel):
     rag_request: RAGRequest
     rag_response: Optional[RAGResponse] = None
     processed_generation_data: Optional[ProcessedGenerationData] = None
+    evals: Optional[list[Score]] = None
     error: Optional[str] = None
     uuid: Optional[str] = None
 
@@ -619,6 +624,48 @@ class EndToEndGeneration(BaseModel):
             metadata={},
             generation=json.dumps(self.model_dump(serialize_as_any=True)),
         )
+
+
+class FeedbackRequest(BaseModel):
+    """A feedback request from the frontend."""
+
+    approve: Optional[bool] = None
+    issues: Optional[list[str]] = None
+    comments: Optional[str] = None
+    email: Optional[str] = None
+
+
+class Feedback(Model):
+    """Represents user feedback for a QAPair."""
+
+    id = AutoField()
+    qapair = ForeignKeyField(QAPair, backref="feedbacks")
+    approve = BooleanField(null=True)
+    issues = TextField(null=True)
+    comments = TextField(null=True)
+    email = TextField(null=True)
+    created_at = DateTimeField(default=datetime.datetime.now)
+    updated_at = DateTimeField(default=datetime.datetime.now)
+
+    def save(self, *args, **kwargs):
+        """Saves the feedback to the database."""
+        self.updated_at = datetime.datetime.now()
+        return super(Feedback, self).save(*args, **kwargs)
+
+    @property
+    def issues_dict(self):
+        """Returns the issues as a dictionary."""
+        return json.loads(str(self.issues)) if self.issues else {}
+
+    @issues_dict.setter
+    def issues_dict(self, value):
+        """Sets the issues for the DB."""
+        self.issues = json.dumps(value)
+
+    class Meta:
+        """Meta options for the Feedback model."""
+
+        database = db
 
 
 class RAGLog(BaseModel):

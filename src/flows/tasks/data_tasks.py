@@ -4,8 +4,15 @@ from prefect import task, get_run_logger, flow
 from peewee import Database, fn
 
 from src.controllers.VespaController import VespaController
-from src.models.data_models import EndToEndGeneration, Notebook, Query, QAPair, DBQuery
-from src.flows.utils import get_db
+from src.models.data_models import (
+    EndToEndGeneration,
+    Notebook,
+    Query,
+    QAPair,
+    DBQuery,
+    Feedback,
+)
+from src.flows.get_db import get_db
 from prefect.tasks import exponential_backoff
 
 
@@ -13,7 +20,7 @@ def migrate_db(db: Database):
     logger = get_run_logger()
     db.connect()
     logger.info("Creating tables...")
-    db.create_tables([DBQuery, QAPair, Notebook], safe=True)
+    db.create_tables([DBQuery, QAPair, Notebook, Feedback], safe=True)
     logger.info("Tables created")
 
 

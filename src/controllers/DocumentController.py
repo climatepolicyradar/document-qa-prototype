@@ -36,7 +36,7 @@ class DocumentController:
                 geography=document_data["geography"],
                 publication_ts=document_data["publication_ts"],
             ),
-            translated=("English" in document_data["languages"]),
+            translated=("English" in document_data["languages"]),  # TODO: Fix this
         )
 
         logger.info(f"📄 Document {document.document_id} fleshed out with metadata")

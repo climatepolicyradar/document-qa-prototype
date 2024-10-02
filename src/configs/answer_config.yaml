@@ -1,12 +1,12 @@
 models:
-  - generation_engine: vertexai
-    model: llama3-1-70b-instruct
+  - generation_engine: gemini
+    model: gemini-1.5-flash
 model_selection: random
 prompt_templates:
   - prompt_template: api-prompts/basic_answer_refined
 template_selection: all
 retrieval:
   - retrieval_window: 0
-    top_k: 6
+    top_k: 10
 retrieval_selection: random
 documents_per_query: 1 # set this to 1 if the query file contains document ids

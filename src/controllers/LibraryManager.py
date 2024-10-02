@@ -18,21 +18,15 @@ class LibraryManager:
     def _get_headers(self) -> dict:
         return {"Authorization": f"Bearer {self.api_token}"}
 
-    def get_metadata_for_citation(
-        self, document_id: str, text_block_ids: list[int]
-    ) -> dict:
-        """Get metadata for a given citation."""
-        base_joined_ids = "','".join(map(str, text_block_ids))
-        text_block_ids_str = f"'{base_joined_ids}'"
+    def get_documents(self) -> list[dict]:
+        """Get all documents from the library."""
         url = f"{self.base_url}/full_text/-/query.json"
         params = {
-            "sql": f"select id, document_id, text_block_id, text, language, type, type_confidence, coords, page_number from text_blocks where document_id = :document_id and text_block_id in ({text_block_ids_str}) order by id limit 10",
-            "document_id": document_id,
+            "sql": "select document_id, name, description, slug, family_slug, publication_ts, geography, geography_name, geography_region, category, type, source, keyword, suggested_topics from documents",
         }
-        print(params)
         response = requests.get(url, headers=self._get_headers(), params=params)
         response.raise_for_status()
-        return response.json()["rows"]
+        return response.json()
 
     def get_document_metadata(self, document_id: str) -> dict:
         """Get metadata for a document."""
@@ -72,7 +66,7 @@ class LibraryManager:
         """Get N text blocks before and after a given block for a document."""
         url = f"{self.base_url}/full_text/-/query.json"
         params = {
-            "sql": "SELECT distinct(tb.text_block_id), tb.text, tb.page_number FROM text_blocks tb WHERE tb.document_id = :document_id AND CAST(tb.text_block_id AS INTEGER) BETWEEN (:text_block_id - :N) AND (:text_block_id + :N) ORDER BY tb.text_block_id",
+            "sql": "SELECT distinct(tb.text_block_id), tb.text, tb.page_number FROM text_blocks tb WHERE tb.document_id = :document_id AND CAST(REPLACE(tb.text_block_id, 'b', '') AS INTEGER) BETWEEN (:text_block_id - :N) AND (:text_block_id + :N) ORDER BY tb.text_block_id",
             "document_id": document_id,
             "text_block_id": text_block_id,
             "N": N,
@@ -85,7 +79,7 @@ class LibraryManager:
         """Get the full text of a document."""
         url = f"{self.base_url}/full_text/-/query.json"
         params = {
-            "sql": "SELECT text_block_id, text, page_number FROM text_blocks WHERE document_id = :document_id ORDER BY text_block_id",
+            "sql": "SELECT text_block_id, text, page_number FROM text_blocks WHERE document_id = :document_id ORDER BY CAST(REPLACE(text_block_id, 'b', '') AS INTEGER)",
             "document_id": document_id,
         }
         response = requests.get(url, headers=self._get_headers(), params=params)
@@ -98,7 +92,7 @@ class LibraryManager:
         """Get the section of a document that contains a given text block."""
         url = f"{self.base_url}/full_text/-/query.json"
         params = {
-            "sql": "WITH current_block AS (SELECT CAST(text_block_id AS INTEGER) AS current_block_number FROM text_blocks WHERE document_id = :document_id AND text_block_id = :text_block_id) SELECT tb.text_block_id, tb.text, tb.type, tb.type_confidence, tb.page_number FROM text_blocks tb, current_block cb WHERE tb.document_id = :document_id AND CAST(tb.text_block_id AS INTEGER) < cb.current_block_number AND tb.type IN ('sectionHeading', 'title') AND tb.type_confidence > 0.8 ORDER BY CAST(tb.text_block_id AS INTEGER) DESC LIMIT 1",
+            "sql": "WITH current_block AS (SELECT CAST(text_block_id AS INTEGER) AS current_block_number FROM text_blocks WHERE document_id = :document_id AND text_block_id = :text_block_id) SELECT tb.text_block_id, tb.text, tb.type, tb.type_confidence, tb.page_number FROM text_blocks tb, current_block cb WHERE tb.document_id = :document_id AND CAST(REPLACE(tb.text_block_id, 'b', '') AS INTEGER) < cb.current_block_number AND tb.type IN ('sectionHeading', 'title') AND tb.type_confidence > 0.8 ORDER BY CAST(REPLACE(tb.text_block_id, 'b', '') AS INTEGER) DESC LIMIT 1",
             "document_id": document_id,
             "text_block_id": text_block_id,
         }

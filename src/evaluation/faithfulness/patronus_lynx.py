@@ -1,7 +1,7 @@
 import json
 from typing import Optional
-from src.evaluation.evaluator import Evaluator, Score
-from src.models.data_models import EndToEndGeneration
+from src.evaluation.evaluator import Evaluator
+from src.models.data_models import EndToEndGeneration, Score
 from src.prompts.template_building import jinja_template_loader
 from src.controllers.EvaluationController import evaluators
 from src.logger import get_logger
@@ -45,7 +45,14 @@ class PatronusLynx(Evaluator):
             result = json.loads(response.strip())
         except json.JSONDecodeError as e:
             LOGGER.error(f"Error decoding JSON: {result}\n\n {e}")
-            return None
+            return Score(
+                score=0,
+                success=False,
+                type=self.TYPE,
+                name=self.NAME,
+                gen_uuid=generation.uuid or "",
+                comments=["Evaluator failed to return a valid response"],
+            )
 
         return Score(
             score=1 if result["SCORE"] == "PASS" else 0,
