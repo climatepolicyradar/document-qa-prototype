@@ -215,7 +215,7 @@ async def get_highlights(source_id: str):
     hs = HighlightService()
 
     return hs.highlight_key_quotes(
-        gen_model.rag_response.query,
+        gen_model.rag_response.query,  # type: ignore
         gen_model.processed_generation_data.assertions,  # type: ignore
     )  # type: ignore
 
