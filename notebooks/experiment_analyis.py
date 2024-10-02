@@ -49,7 +49,7 @@ def aggregate_and_print_results(
     title: Optional[str],
     update_evals: bool = False,
     markdown: bool = False,
-    transpose: bool = True
+    transpose: bool = True,
 ) -> tuple[pd.DataFrame, str]:
     """
     Aggregates and prints the results for a given set of attributes based on the evals and qa-pairs dataframes
@@ -84,7 +84,7 @@ def aggregate_and_print_results(
     _df = df[df["id"].isin(evals.index)]
 
     out_str += f"**Total number of positives: {len(positive_df)} out of {len(_df)}, ({len(positive_df) / len(_df) * 100:.2f}%)**"
-    
+
     for attribute, aggregation in attributes_to_breakdown.items():
         out_str += f"\n{attribute} as {aggregation}:"
         printable = breakdown_for_attribute(
@@ -117,7 +117,7 @@ def filter_sequence(
         filter_funcs: list[tuple[str, str, Callable]]: a list of filters in the form of (name, dataframe-to-apply-on, filter) that will be applied in order. They should return True for violation.
         aggregation_column: str: the column to aggregate the results on
         normalised: bool: whether to normalise the counts
-        
+
     Returns:
         pd.DataFrame: The updated evals dataframe if update_evals is True, otherwise the evals dataframe -- this is used for filtering
             purposes given the sequential nature of the analysis
@@ -149,7 +149,7 @@ def breakdown_for_attribute(
     attribute: str,
     aggregation: str,
     markdown: bool,
-    transpose: bool
+    transpose: bool,
 ) -> Union[pd.DataFrame, str]:
     """Creates a breakdown of the counts or ratios based on the eval results for a given attribute"""
 
