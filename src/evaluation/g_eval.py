@@ -41,7 +41,7 @@ class GEval(Evaluator, ABC):
 
         if prompt is None:
             prompt = self.get_prompt(generation)
-        
+
         response = self.model.invoke(prompt)
 
         if hasattr(response, "content"):
@@ -53,7 +53,6 @@ class GEval(Evaluator, ABC):
 
         if not result.isdigit():  # type: ignore
             raise ValueError(f"G-Eval score is not a digit: {result}")  # type: ignore
-
 
         score = self.response_postprocessor(result)
 
@@ -72,12 +71,10 @@ class GEval(Evaluator, ABC):
         """Returns the prompt for the evaluator"""
         pass
 
-
     @abstractmethod
     def get_success(self, score: float) -> bool:
         """Returns the success of the evaluator"""
         pass
-
 
     def response_postprocessor(self, response: str) -> Optional[int]:
         """Post-processes the response"""
@@ -85,12 +82,14 @@ class GEval(Evaluator, ABC):
             return int(response)
         except ValueError:
             try:
-                LOGGER.warning(f"Error processing response: {response}, trying to extract the score")
+                LOGGER.warning(
+                    f"Error processing response: {response}, trying to extract the score"
+                )
                 _digit_pattern = re.compile(r"(\d+)")
                 match = _digit_pattern.search(response)
                 if match is None:
                     return None
                 return int(match.group(1))
             except Exception:
-                LOGGER.error(f"Failed to extract the score from response")
+                LOGGER.error("Failed to extract the score from response")
                 return None
