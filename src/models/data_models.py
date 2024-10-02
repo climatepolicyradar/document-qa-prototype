@@ -402,7 +402,7 @@ class RAGResponse(BaseModel):
 
     text: str
     retrieved_documents: list[dict]
-    query: str
+    query: Optional[str]
     highlights: Optional[list[str]] = None
     metadata: dict = {}
 
