@@ -7,6 +7,6 @@ prompt_templates:
 template_selection: all
 retrieval:
   - retrieval_window: 0
-    top_k: 10
+    top_k: 20
 retrieval_selection: random
 documents_per_query: 1 # set this to 1 if the query file contains document ids
