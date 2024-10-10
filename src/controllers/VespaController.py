@@ -23,7 +23,7 @@ class VespaController:
         query: str,
         document_id: str,
         hits: int = 20,
-        rank_profile: str = "dense_bge_small",
+        rank_profile: str = "hybrid_bge_small",
     ) -> dict:
         """Query Vespa for a set of passages"""
         # Connect here not on construction so connection is not held open for long
