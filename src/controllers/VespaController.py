@@ -25,7 +25,12 @@ class VespaController:
         hits: int = 20,
         rank_profile: str = "hybrid_bge_small",
     ) -> dict:
-        """Query Vespa for a set of passages"""
+        """
+        Query Vespa for a set of passages
+
+        Rank profiles can be found in the Vespa schema:
+        https://github.com/climatepolicyradar/navigator-infra/blob/main/vespa/pods_research/schemas/document_passage.sd
+        """
         # Connect here not on construction so connection is not held open for long
         vespa = get_vespa_app()
         LOGGER.info(f"🔍 Vespa query: {query} for document_id: {document_id}")
