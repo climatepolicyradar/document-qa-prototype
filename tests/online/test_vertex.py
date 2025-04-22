@@ -1,6 +1,4 @@
 import pytest
-from src.controllers.RagController import RagController
-from src.controllers.ScenarioController import ScenarioController
 from src.online.inference import get_llm
 from langchain_core.documents import Document as LangChainDocument
 
@@ -22,6 +20,7 @@ def mock_retriever():
             metadata={"title": "Second Document"},
         ),
     ]
+
 
 """
 THESE TESTS FAIL UNTIL WE FIX THE VERTEX AI MODEL
