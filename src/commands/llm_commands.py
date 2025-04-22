@@ -24,7 +24,7 @@ class SummariseDocuments(LLMCommand):
         """Call the command"""
         scenario = Scenario(
             prompt=Prompt.from_template("response/summarise_simple"),
-            model="gemini-1.5-flash",
+            model="gemini-2.0-flash-001",
             generation_engine=LLMTypes.GEMINI.value,
         )
 

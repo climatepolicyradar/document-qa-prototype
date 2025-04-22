@@ -141,7 +141,7 @@ def get_llm(
         )  #  type: ignore
 
     elif _llm_type == LLMTypes.GEMINI:
-        _model = model or "gemini-1.5-flash-latest"
+        _model = model or "gemini-2.0-flash-001"
 
         get_secret("GOOGLE_API_KEY")  # Put in env if not there.
 

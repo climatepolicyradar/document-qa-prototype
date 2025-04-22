@@ -22,7 +22,7 @@ class GEvalFaithfulness(GEval):
     def __init__(self, *args):
         super().__init__(*args)
 
-        self.model = get_llm("gemini", "gemini-1.5-pro")
+        self.model = get_llm("gemini", "gemini-2.0-flash-001")
         self.template = jinja_template_loader(
             config.evaluation_templates_folder / "g_eval_faithfulness.txt"
         )

@@ -1,6 +1,6 @@
 models:
   - generation_engine: gemini
-    model: gemini-1.5-flash
+    model: gemini-2.0-flash-001
 model_selection: random
 prompt_templates:
   - prompt_template: api-prompts/basic_answer_refined
