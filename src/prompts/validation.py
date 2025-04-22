@@ -1,4 +1,5 @@
-from transformers import AutoTokenizer, PretrainedConfig
+from transformers.models.auto.tokenization_auto import AutoTokenizer
+from transformers.configuration_utils import PretrainedConfig
 from functools import lru_cache
 from typing import Optional
 import tiktoken
