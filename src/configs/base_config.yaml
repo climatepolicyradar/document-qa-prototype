@@ -6,9 +6,7 @@ models:
   - generation_engine: huggingface
     model: mistralai/Mistral-7B-Instruct-v0.2
   - generation_engine: gemini
-    model: gemini-1.5-flash-latest
-  - generation_engine: gemini
-    model: gemini-1.0-pro-001
+    model: gemini-2.0-flash-001
 model_selection: random
 prompt_templates:
   - prompt_template: response/FAITHFULQA_SCHIMANSKI_CITATION_QA_TEMPLATE_MODIFIED

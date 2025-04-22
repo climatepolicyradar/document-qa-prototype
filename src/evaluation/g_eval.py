@@ -27,7 +27,7 @@ class GEval(Evaluator, ABC):
     TYPE = ""
     NAME = ""
 
-    def __init__(self, model_name: str = "gemini-1.5-pro"):
+    def __init__(self, model_name: str = "gemini-2.0-flash-001"):
         self.model = get_llm("gemini", model_name)
 
     def evaluate(

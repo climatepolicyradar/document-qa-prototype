@@ -5,6 +5,8 @@ models:
     model: gemini-1.5-flash
   - generation_engine: gemini
     model: gemini-1.0-pro
+  - generation_engine: gemini
+    model: gemini-2.0-flash-001
   - generation_engine: vertexai
     model: mistral-nemo
   - generation_engine: vertexai

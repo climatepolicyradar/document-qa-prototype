@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.10-slim
 
 RUN mkdir /opt/prefect
 WORKDIR /opt/prefect
@@ -10,7 +10,7 @@ RUN pip install --no-cache --upgrade pip
 RUN pip install --no-cache poetry
 COPY pyproject.toml ./
 RUN poetry config virtualenvs.create false
-RUN poetry install --no-interaction --no-root
+RUN poetry install --no-interaction --no-root -v
 
 # Copy files to image
 COPY data ./data
